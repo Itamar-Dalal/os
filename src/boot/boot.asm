@@ -1,23 +1,36 @@
-BITS 16
-ORG 0x7c00
+global loader
+ 
+extern kmain
 
-mov si, msg
-call prints
-jmp $
+MODULEALIGN equ  1<<0
+MEMINFO     equ  1<<1
+FLAGS       equ  MODULEALIGN | MEMINFO
+MAGIC       equ    0x1BADB002
+CHECKSUM    equ -(MAGIC + FLAGS) ; For error detection
+ 
+section .text
+ 
+align 4 ; Multiboot standard
+    dd MAGIC
+    dd FLAGS
+    dd CHECKSUM
 
-prints:
-	mov ah, 0x0e
-	printc:
-		mov al, [si]
-		inc si
-		cmp al, 0
-		jz return
-		int 0x10
-		jmp printc
-	return:
-		ret
+STACKSIZE equ 0x4000
+ 
+loader:
+	mov  esp, stack + STACKSIZE
+	push eax
+	push ebx
+	
+	call kmain
+	
+	cli
+	.hang:
+    		hlt
+    		jmp  .hang
 
-msg db "Hello World!", 0
+section .bss
 
-TIMES 510 - ($ - $$) db 0 ; Padding to make the total size 512 bytes
-dw 0xaa55 ; Boot sector signature (magic number)
+align 4
+stack:
+    resb STACKSIZE
