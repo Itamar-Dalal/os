@@ -42,10 +42,17 @@ void gdt_setup()
 	gdt_ptr_t gdt_ptr;
 	gdt_ptr.limit = (sizeof(gdt_entry_t) * 5) - 1; // -1 because it starts from 0
 	gdt_ptr.base = (unsigned int)&gdt_entries;
+	/*
+	Present bit (P): 1
+	DPL (Descriptor Privilege Level): 00 (for ring 0, kernel privilege) and 11 (for ring 3, user privilege)
+	Descriptor type (S): 1
+	Type field: 1010 and 0010 (1 at the start means code segment and 0 means data segment)
+	I encoded the result to hex
+	*/
 	gdt_entries[0] = gdt_set_gate(0, 0, 0, 0);
-	gdt_entries[1] = gdt_set_gate(0, 0xFFFFFFFF, 0x9A, 0xCF);
-	gdt_entries[2] = gdt_set_gate(0, 0xFFFFFFFF, 0x92, 0xCF);
-	gdt_entries[3] = gdt_set_gate(0, 0xFFFFFFFF, 0xFA, 0xCF);
-	gdt_entries[4] = gdt_set_gate(0, 0xFFFFFFFF, 0xF2, 0xCF);
+	gdt_entries[1] = gdt_set_gate(0, 0xFFFFFFFF, 0x9A, 0xCF); // Code segment with kernel privilege
+	gdt_entries[2] = gdt_set_gate(0, 0xFFFFFFFF, 0x92, 0xCF); // Data segment with kernel privilege
+	gdt_entries[3] = gdt_set_gate(0, 0xFFFFFFFF, 0xFA, 0xCF); // Code segment with user privilege
+	gdt_entries[4] = gdt_set_gate(0, 0xFFFFFFFF, 0xF2, 0xCF); // Data segment with user privilege
 	gdt_write((unsigned int)&gdt_ptr);
 }
