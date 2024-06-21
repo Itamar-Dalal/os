@@ -8,6 +8,6 @@
 
 void screen_clear();
 void screen_scroll();
-void screen_print(char* string);
+void screen_print(char *);
 
 #endif
