@@ -351,7 +351,7 @@ void idt_setup() {
 	idt_ptr.limit = sizeof(idt_entry_t) * 256 - 1;
 	idt_ptr.base = (unsigned int)&idt_entries;
 
-	idt_set_gate(0, (unsigned int)isr0, 0x08, 0x8e);
+	idt_set_gate(0, (unsigned int)isr0, 0x08, 0x8e); // 0x08 - selector to code segment ring 0
 	idt_set_gate(1, (unsigned int)isr1, 0x08, 0x8e);
 	idt_set_gate(2, (unsigned int)isr2, 0x08, 0x8e);
 	idt_set_gate(3, (unsigned int)isr3, 0x08, 0x8e);
