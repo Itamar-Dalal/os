@@ -273,3 +273,26 @@ ISR_NOERRCODE 252
 ISR_NOERRCODE 253
 ISR_NOERRCODE 254
 ISR_NOERRCODE 255
+
+isr_common_stub:
+	pusha
+	mov ax, ds
+	push eax
+	mov ax, 0x10
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+
+	call isr_handler
+	
+	pop ebx
+	mov ds, bx
+	mov es, bx
+	mov fs, bx
+	mov gs, bx
+	popa
+	add esp, 8
+
+	sti
+	iret ; Interrupt ret
