@@ -7,7 +7,7 @@
 #define NUM_OF_SCROLL_BYTES 160
 
 void screen_clear();
-void screen_scroll();
 void screen_print(char *);
+void screen_print_int(int, int);
 
 #endif

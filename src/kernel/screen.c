@@ -60,3 +60,42 @@ void screen_print(char* string) {
 		i++;
 	}
 }
+
+char *itoa(int value, char *str, int base) {
+	char *rc;
+	char *ptr;
+	char *low;
+	if (base < 2 || base > 36)
+	{
+		*str = '\0';
+		return str;
+	}
+	rc = ptr = str;
+	// Set '-' for negative decimals
+	if (value < 0 && base == 10)
+		*ptr++ = '-';
+	low = ptr;
+	do
+	{
+		// Modulo is negative for negative value. This trick makes abs() unnecessary.
+		*ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz"[35 + value % base];
+		value /= base;
+	} while (value);
+	// Terminating the string
+	*ptr-- = '\0';
+	// Invert the numbers
+	while (low < ptr)
+	{
+		char tmp = *low;
+		*low++ = *ptr;
+		*ptr-- = tmp;
+	}
+	return rc;
+}
+
+
+screen_print_int(int num, int base) {
+	char buff[100];
+	itoa(num, buff, base);
+	screen_print(buff);
+}
