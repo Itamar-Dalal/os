@@ -51,5 +51,11 @@ int kmain(void *mbd, unsigned int magic) {
     screen_print("Setting up the GDT.\n");
     gdt_setup();
     screen_print("GDT set.\n");
+    screen_print("Setting up the IDT.\n");
+    idt_setup();
+    screen_print("IDT set.\n");
+    screen_print("Sending interrupt.\n");
+    __asm__("int $0x00");
+    __asm__("int $0x80");
     return 0;
 }

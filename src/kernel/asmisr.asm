@@ -4,9 +4,9 @@ global temp
 	global isr%1
 	isr%1:
 		cli ; Blocks sending further interrupts
-	push byte 0
-	push byte %1
-	jmp isr_common_stub
+		push byte 0
+		push byte %1
+		jmp isr_common_stub
 %endmacro
 
 %macro ISR_ERRCODE 1
@@ -14,7 +14,7 @@ global temp
 	isr%1:
 		cli
 		push byte %1
-	jmp isr_common_stub
+		jmp isr_common_stub
 %endmacro
 
 ISR_NOERRCODE 0
@@ -274,10 +274,14 @@ ISR_NOERRCODE 253
 ISR_NOERRCODE 254
 ISR_NOERRCODE 255
 
+extern isr_handler
+
 isr_common_stub:
 	pusha
+
 	mov ax, ds
 	push eax
+
 	mov ax, 0x10
 	mov ds, ax
 	mov es, ax
@@ -285,14 +289,15 @@ isr_common_stub:
 	mov gs, ax
 
 	call isr_handler
-	
+
 	pop ebx
 	mov ds, bx
 	mov es, bx
 	mov fs, bx
 	mov gs, bx
-	popa
-	add esp, 8
 
+	popa
+
+	add esp, 8
 	sti
-	iret ; Interrupt ret
+	iret

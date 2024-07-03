@@ -65,6 +65,7 @@ char *itoa(int value, char *str, int base) {
 	char *rc;
 	char *ptr;
 	char *low;
+	// Check if the base is valid
 	if (base < 2 || base > 36)
 	{
 		*str = '\0';
@@ -93,8 +94,7 @@ char *itoa(int value, char *str, int base) {
 	return rc;
 }
 
-
-screen_print_int(int num, int base) {
+void screen_print_int(int num, int base) {
 	char buff[100];
 	itoa(num, buff, base);
 	screen_print(buff);
