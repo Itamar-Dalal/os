@@ -1,5 +1,14 @@
 #include "descriptors.h"
 
+#define PIC1_COMMAND 0x20
+#define PIC1_DATA    0x21
+#define PIC2_COMMAND 0xA0
+#define PIC2_DATA    0xA1
+
+#define ICW1_INIT    0x11
+#define ICW4_8086    0x01
+
+
 extern void gdt_write(unsigned int);
 extern void idt_write(unsigned int);
 
@@ -337,6 +346,23 @@ void gdt_setup()
 	gdt_write((unsigned int)&gdt_ptr);
 }
 
+void irq_setup() {
+	// ICW1
+	outb(PIC1_COMMAND, ICW1_INIT);
+	outb(PIC2_COMMAND, ICW1_INIT);
+	// ICW2
+	outb(PIC1_DATA, 0x20);
+	outb(PIC2_DATA, 0x28);
+	// ICW3
+	outb(PIC1_DATA, 0x04); // 00000100 - IRQ2
+	outb(PIC2_DATA, 0x02);
+	// ICW4
+	outb(PIC1_DATA, ICW4_8086);
+	outb(PIC2_DATA, ICW4_8086);
+	// Mask (all IRQ are enabled)
+	outb(PIC1_DATA, 0x00);
+	outb(PIC2_DATA, 0x00);
+}
 
 void idt_set_gate(int index, unsigned int base, unsigned short selector, unsigned char flags) {
 	idt_entries[index].base_low = base & 0xFFFF;
@@ -609,4 +635,7 @@ void idt_setup() {
 	idt_set_gate(255, (unsigned int)isr255, 0x08, 0x8e);
 
 	idt_write((unsigned int)&idt_ptr);
+
+	irq_setup();
+	__asm__("sti");
 }
