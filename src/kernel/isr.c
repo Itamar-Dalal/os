@@ -2,6 +2,10 @@
 #include "screen.h"
 #include "tools.h"
 
+#define PIC1_COMMAND 0x20
+#define PIC2_COMMAND 0xA0
+#define PIC_EOI 0x20 // End of interrupt
+
 void (*isr_callbacks[16])();
 
 void isr_handler(registers_t regs) {
@@ -12,9 +16,9 @@ void isr_handler(registers_t regs) {
 
 void irq_handler(registers_t regs)
 {
-	outb(0x20, 0x20); // Ack to the main PIC
-	if (regs.int_no >= IRQ8) { // Check if the int is from the slave PIC
-		outb(0xA0, 0x20); // Ack also to the slave PIC
+	outb(PIC1_COMMAND, PIC_EOI); // Ack to the main PIC
+	if (regs.int_no >= IRQ8) { // Check if the interrupt is from the slave PIC
+		outb(PIC2_COMMAND, PIC_EOI); // Ack also to the slave PIC
 	}
 	if (isr_callbacks[regs.int_no - IRQ0] != 0) {
 		(*isr_callbacks[regs.int_no - IRQ0])();
