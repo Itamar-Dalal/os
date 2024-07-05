@@ -350,10 +350,13 @@ void gdt_setup()
 
 void watch() {
 	static unsigned int time = 0;
-	if (time % 1000 == 0) { // 1 second
-		screen_print("Tick: ");
-		screen_print_int(time, 10);
-		screen_print("\n");
+	static unsigned int seconds = 0;
+	if (time >= 1000) { // 1 second
+		time %= 1000;
+		seconds++;
+		screen_print("Time: ");
+		screen_print_int(seconds, 10);
+		screen_print("s\n");
 	}
 	time += 55; // PIT sends an interrupt every 55 milliseconds
 }
