@@ -6,7 +6,7 @@ ASM:=nasm
 ASMFLAGS:=-f elf
 
 all: kernel.o boot.o
-	$(LD) $(LDFLAGS) kernel.o boot.o screen.o asmisr.o gdt.o idt.o descriptors.o isr.o
+	$(LD) $(LDFLAGS) kernel.o boot.o screen.o asmisr.o gdt.o idt.o descriptors.o isr.o tools.o
 
 kernel.o: screen.o descriptors.o
 	$(CC) $(CFLAGS) kernel/kernel.c
@@ -23,13 +23,16 @@ idt.o: isr.o
 asmisr.o:
 	$(ASM) $(ASMFLAGS) -o asmisr.o kernel/asmisr.asm
 
-descriptors.o: asmisr.o gdt.o idt.o 
+tools.o:
+	$(CC) $(CFLAGS) kernel/tools.c
+
+descriptors.o: asmisr.o gdt.o idt.o tools.o isr.o
 	$(CC) $(CFLAGS) kernel/descriptors.c
 
-screen.o:
+screen.o: tools.o
 	$(CC) $(CFLAGS) kernel/screen.c
 
-isr.o:
+isr.o: tools.o
 	$(CC) $(CFLAGS) kernel/isr.c
 
 clean:

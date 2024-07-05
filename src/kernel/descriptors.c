@@ -1,4 +1,7 @@
 #include "descriptors.h"
+#include "isr.h"
+#include "tools.h"
+#include "screen.h"
 
 #define PIC1_COMMAND 0x20
 #define PIC1_DATA    0x21
@@ -44,22 +47,22 @@ extern void isr28();
 extern void isr29();
 extern void isr30();
 extern void isr31();
-extern void isr32();
-extern void isr33();
-extern void isr34();
-extern void isr35();
-extern void isr36();
-extern void isr37();
-extern void isr38();
-extern void isr39();
-extern void isr40();
-extern void isr41();
-extern void isr42();
-extern void isr43();
-extern void isr44();
-extern void isr45();
-extern void isr46();
-extern void isr47();
+extern void irq0();
+extern void irq1();
+extern void irq2();
+extern void irq3();
+extern void irq4();
+extern void irq5();
+extern void irq6();
+extern void irq7();
+extern void irq8();
+extern void irq9();
+extern void irq10();
+extern void irq11();
+extern void irq12();
+extern void irq13();
+extern void irq14();
+extern void irq15();
 extern void isr48();
 extern void isr49();
 extern void isr50();
@@ -269,7 +272,6 @@ extern void isr253();
 extern void isr254();
 extern void isr255();
 
-
 struct gdt_entry_struct
 {
 	unsigned short limit_low;
@@ -346,6 +348,16 @@ void gdt_setup()
 	gdt_write((unsigned int)&gdt_ptr);
 }
 
+void watch() {
+	static unsigned int time = 0;
+	if (time % 1000 == 0) { // 1 second
+		screen_print("Tick: ");
+		screen_print_int(time, 10);
+		screen_print("\n");
+	}
+	time += 55; // PIT sends an interrupt every 55 milliseconds
+}
+
 void irq_setup() {
 	// ICW1
 	outb(PIC1_COMMAND, ICW1_INIT);
@@ -362,6 +374,8 @@ void irq_setup() {
 	// Mask (all IRQ are enabled)
 	outb(PIC1_DATA, 0x00);
 	outb(PIC2_DATA, 0x00);
+
+	register_isr_callback(IRQ0, &watch);
 }
 
 void idt_set_gate(int index, unsigned int base, unsigned short selector, unsigned char flags) {
@@ -409,22 +423,22 @@ void idt_setup() {
 	idt_set_gate(29, (unsigned int)isr29, 0x08, 0x8e);
 	idt_set_gate(30, (unsigned int)isr30, 0x08, 0x8e);
 	idt_set_gate(31, (unsigned int)isr31, 0x08, 0x8e);
-	idt_set_gate(32, (unsigned int)isr32, 0x08, 0x8e);
-	idt_set_gate(33, (unsigned int)isr33, 0x08, 0x8e);
-	idt_set_gate(34, (unsigned int)isr34, 0x08, 0x8e);
-	idt_set_gate(35, (unsigned int)isr35, 0x08, 0x8e);
-	idt_set_gate(36, (unsigned int)isr36, 0x08, 0x8e);
-	idt_set_gate(37, (unsigned int)isr37, 0x08, 0x8e);
-	idt_set_gate(38, (unsigned int)isr38, 0x08, 0x8e);
-	idt_set_gate(39, (unsigned int)isr39, 0x08, 0x8e);
-	idt_set_gate(40, (unsigned int)isr40, 0x08, 0x8e);
-	idt_set_gate(41, (unsigned int)isr41, 0x08, 0x8e);
-	idt_set_gate(42, (unsigned int)isr42, 0x08, 0x8e);
-	idt_set_gate(43, (unsigned int)isr43, 0x08, 0x8e);
-	idt_set_gate(44, (unsigned int)isr44, 0x08, 0x8e);
-	idt_set_gate(45, (unsigned int)isr45, 0x08, 0x8e);
-	idt_set_gate(46, (unsigned int)isr46, 0x08, 0x8e);
-	idt_set_gate(47, (unsigned int)isr47, 0x08, 0x8e);
+	idt_set_gate(32, (unsigned int)irq0, 0x08, 0x8e);
+	idt_set_gate(33, (unsigned int)irq1, 0x08, 0x8e);
+	idt_set_gate(34, (unsigned int)irq2, 0x08, 0x8e);
+	idt_set_gate(35, (unsigned int)irq3, 0x08, 0x8e);
+	idt_set_gate(36, (unsigned int)irq4, 0x08, 0x8e);
+	idt_set_gate(37, (unsigned int)irq5, 0x08, 0x8e);
+	idt_set_gate(38, (unsigned int)irq6, 0x08, 0x8e);
+	idt_set_gate(39, (unsigned int)irq7, 0x08, 0x8e);
+	idt_set_gate(40, (unsigned int)irq8, 0x08, 0x8e);
+	idt_set_gate(41, (unsigned int)irq9, 0x08, 0x8e);
+	idt_set_gate(42, (unsigned int)irq10, 0x08, 0x8e);
+	idt_set_gate(43, (unsigned int)irq11, 0x08, 0x8e);
+	idt_set_gate(44, (unsigned int)irq12, 0x08, 0x8e);
+	idt_set_gate(45, (unsigned int)irq13, 0x08, 0x8e);
+	idt_set_gate(46, (unsigned int)irq14, 0x08, 0x8e);
+	idt_set_gate(47, (unsigned int)irq15, 0x08, 0x8e);
 	idt_set_gate(48, (unsigned int)isr48, 0x08, 0x8e);
 	idt_set_gate(49, (unsigned int)isr49, 0x08, 0x8e);
 	idt_set_gate(50, (unsigned int)isr50, 0x08, 0x8e);
@@ -633,7 +647,6 @@ void idt_setup() {
 	idt_set_gate(253, (unsigned int)isr253, 0x08, 0x8e);
 	idt_set_gate(254, (unsigned int)isr254, 0x08, 0x8e);
 	idt_set_gate(255, (unsigned int)isr255, 0x08, 0x8e);
-
 	idt_write((unsigned int)&idt_ptr);
 
 	irq_setup();

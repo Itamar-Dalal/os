@@ -1,5 +1,6 @@
 #include "isr.h"
 #include "screen.h"
+#include "tools.h"
 
 void (*isr_callbacks[16])();
 

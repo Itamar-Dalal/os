@@ -57,5 +57,9 @@ int kmain(void *mbd, unsigned int magic) {
     screen_print("Sending interrupt.\n");
     __asm__("int $0x00");
     __asm__("int $0x80");
+    //__asm__("int $0x23");
+    while (1) {
+        ;
+    }
     return 0;
 }

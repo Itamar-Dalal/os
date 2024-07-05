@@ -1,4 +1,5 @@
 #include "screen.h"
+#include "tools.h"
 
 unsigned char *vidmem = (unsigned char *)0xb8000;
 unsigned char x = 0;
@@ -59,39 +60,6 @@ void screen_print(char* string) {
 		}
 		i++;
 	}
-}
-
-char *itoa(int value, char *str, int base) {
-	char *rc;
-	char *ptr;
-	char *low;
-	// Check if the base is valid
-	if (base < 2 || base > 36)
-	{
-		*str = '\0';
-		return str;
-	}
-	rc = ptr = str;
-	// Set '-' for negative decimals
-	if (value < 0 && base == 10)
-		*ptr++ = '-';
-	low = ptr;
-	do
-	{
-		// Modulo is negative for negative value. This trick makes abs() unnecessary.
-		*ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz"[35 + value % base];
-		value /= base;
-	} while (value);
-	// Terminating the string
-	*ptr-- = '\0';
-	// Invert the numbers
-	while (low < ptr)
-	{
-		char tmp = *low;
-		*low++ = *ptr;
-		*ptr-- = tmp;
-	}
-	return rc;
 }
 
 void screen_print_int(int num, int base) {
