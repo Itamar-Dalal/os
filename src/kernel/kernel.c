@@ -47,19 +47,17 @@ int kmain(void *mbd, unsigned int magic) {
         screen_print("Invalid multiboot header.\n");
         return -1;
     }
-    screen_print("Hello, world!\n");
-    screen_print("Setting up the GDT.\n");
+    screen_print("------------------------- OS developed by Itamar Dalal -------------------------\n");
+    //screen_print("Setting up the GDT.\n");
     gdt_setup();
-    screen_print("GDT set.\n");
-    screen_print("Setting up the IDT.\n");
+    //screen_print("GDT set.\n");
+    //screen_print("Setting up the IDT.\n");
     idt_setup();
-    screen_print("IDT set.\n");
-    screen_print("Sending interrupt.\n");
-    __asm__("int $0x00");
-    __asm__("int $0x80");
+    //screen_print("IDT set.\n");
+    //screen_print("Sending interrupt.\n"); // For checking the IDT is working
+    //__asm__("int $0x00");
+    //__asm__("int $0x80");
     //__asm__("int $0x23");
-    while (1) {
-        ;
-    }
+    while (1) {;}
     return 0;
 }
