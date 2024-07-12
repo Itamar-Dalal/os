@@ -11,6 +11,8 @@
 #define ICW1_INIT    0x11
 #define ICW4_8086    0x01
 
+#define KEYBOARD_DATA_PORT 0x60
+
 
 extern void gdt_write(unsigned int);
 extern void idt_write(unsigned int);
@@ -272,6 +274,11 @@ extern void isr253();
 extern void isr254();
 extern void isr255();
 
+typedef unsigned char uint8_t;
+typedef int bool;
+#define true 1
+#define false 0
+
 struct gdt_entry_struct
 {
 	unsigned short limit_low;
@@ -348,7 +355,7 @@ void gdt_setup()
 	gdt_write((unsigned int)&gdt_ptr);
 }
 
-void watch() {
+/*void watch() {
 	static unsigned int time = 0;
 	static unsigned int seconds = 0;
 	if (time >= 1000) { // 1 second
@@ -359,6 +366,80 @@ void watch() {
 		screen_print("s\n");
 	}
 	time += 55; // PIT sends an interrupt every 55 milliseconds
+}*/
+
+void keyboard_interrupt_handler() {
+	uint8_t scancode = inb(KEYBOARD_DATA_PORT);
+	// A simple lookup table for US keyboard layout (partial)
+	static char scancode_table[128] = {
+		0, 27, '1', '2', '3', '4', '5', '6', '7', '8', /* 9 */
+		'9', '0', '-', '=', '\b', /* Backspace */
+		'\t', /* Tab */
+		'q', 'w', 'e', 'r', /* 19 */
+		't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n', /* Enter key */
+		0, /* 29   - Control */
+		'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', /* 39 */
+		'\'', '`', 0, /* Left shift */
+		'\\', 'z', 'x', 'c', 'v', 'b', 'n', /* 49 */
+		'm', ',', '.', '/', 0, /* Right shift */
+		'*',
+		0, /* Alt */
+		' ', /* Space bar */
+		0, /* Caps lock */
+		/* ... other keys can be added here */
+	};
+
+	// A simple lookup table for Shift+key for US keyboard layout (partial)
+	static char shift_scancode_table[128] = {
+		0, 27, '!', '@', '#', '$', '%', '^', '&', '*', /* 9 */
+		'(', ')', '_', '+', '\b', /* Backspace */
+		'\t', /* Tab */
+		'Q', 'W', 'E', 'R', /* 19 */
+		'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n', /* Enter key */
+		0, /* 29   - Control */
+		'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', /* 39 */
+		'"', '~', 0, /* Left shift */
+		'|', 'Z', 'X', 'C', 'V', 'B', 'N', /* 49 */
+		'M', '<', '>', '?', 0, /* Right shift */
+		'*',
+		0, /* Alt */
+		' ', /* Space bar */
+		0, /* Caps lock */
+		/* ... other keys can be added here */
+	};
+
+	bool shift_pressed = false;
+	bool caps_lock_active = false;
+	// Handle key releases
+	if (scancode & 0x80) {
+		scancode &= 0x7F; // Clear the top bit to get the make code
+		if (scancode == 0x2A || scancode == 0x36) {
+			shift_pressed = false; // Left Shift or Right Shift released
+		}
+		return;
+	}
+
+	// Handle key presses
+	if (scancode == 0x2A || scancode == 0x36) {
+		shift_pressed = true; // Left Shift or Right Shift pressed
+		return;
+	}
+	else if (scancode == 0x3A) {
+		caps_lock_active = !caps_lock_active; // Toggle Caps Lock
+		return;
+	}
+
+	char ascii;
+	if (shift_pressed) {
+		ascii = shift_scancode_table[scancode];
+	}
+	else {
+		ascii = scancode_table[scancode];
+		if (caps_lock_active && ascii >= 'a' && ascii <= 'z') {
+			ascii -= 32; // Convert to uppercase if Caps Lock is active
+		}
+	}
+	screen_print(&ascii);
 }
 
 void irq_setup() {
@@ -374,14 +455,15 @@ void irq_setup() {
 	// ICW4
 	outb(PIC1_DATA, ICW4_8086);
 	outb(PIC2_DATA, ICW4_8086);
-	// Mask (all IRQ are enabled)
+	// Unmask (all IRQ are enabled)
 	outb(PIC1_DATA, 0x00);
 	outb(PIC2_DATA, 0x00);
 
-	register_isr_callback(IRQ0, &watch);
+	//register_isr_callback(IRQ0, &watch);
+	register_isr_callback(IRQ1, &keyboard_interrupt_handler);
 }
 
-void idt_set_gate(int index, unsigned int base, unsigned short selector, unsigned char flags) {
+void idt_set_gate(int index, unsigned int base, unsigned short selector, uint8_t flags) {
 	idt_entries[index].base_low = base & 0xFFFF;
 	idt_entries[index].base_high = (base >> 16) & 0xFFFF;
 	idt_entries[index].selector = selector;
