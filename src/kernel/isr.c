@@ -10,8 +10,8 @@ void (*isr_callbacks[16])();
 
 void isr_handler(registers_t regs) {
 	//screen_print("Recieved interrupt: ");
-	screen_print_int(regs.int_no, 16);
-	screen_print("\n");
+	//screen_print_int(regs.int_no, 16);
+	//screen_print("\n");
 }
 
 void irq_handler(registers_t regs)
