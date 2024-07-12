@@ -1,5 +1,6 @@
 #!/usr/bin/bash
 
+export PATH=$HOME/opt/cross/bin:$PATH
 cd src
 make
 cp kernel.bin ../iso/kernel/kernel.bin

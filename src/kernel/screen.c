@@ -40,13 +40,20 @@ void screen_print(char* string) {
 		else {
 			switch (string[i]) {
 				case 0x08: // Backspace
-					if (x != 0)
+					if (x != 0) {
 						x--;
+						*(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = ' ';
+					}
+					else if(y > 2){
+						x = NUM_OF_CELLS_X - 1;
+						y--;
+						*(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = ' ';
+					}
 					break;
 				
 				case 0x09: // Tab
 					x += 4;
-					if (x >= 80) {
+					if (x >= NUM_OF_CELLS_X) {
 						x = 0;
 						y++;
 					}

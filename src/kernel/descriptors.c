@@ -3,6 +3,9 @@
 #include "tools.h"
 #include "screen.h"
 
+#define true 1
+#define false 0
+
 #define PIC1_COMMAND 0x20
 #define PIC1_DATA    0x21
 #define PIC2_COMMAND 0xA0
@@ -13,6 +16,8 @@
 
 #define KEYBOARD_DATA_PORT 0x60
 
+typedef unsigned char uint8_t;
+typedef int bool;
 
 extern void gdt_write(unsigned int);
 extern void idt_write(unsigned int);
@@ -274,10 +279,6 @@ extern void isr253();
 extern void isr254();
 extern void isr255();
 
-typedef unsigned char uint8_t;
-typedef int bool;
-#define true 1
-#define false 0
 
 struct gdt_entry_struct
 {
