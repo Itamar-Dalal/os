@@ -1,41 +1,43 @@
-CC:=i586-elf-gcc
-CFLAGS:=-c -Wall -I../include
-LD:=i586-elf-ld
-LDFLAGS:=-T linker.ld -o kernel.bin
-ASM:=nasm
-ASMFLAGS:=-f elf
+CC := i586-elf-gcc
+CFLAGS := -c -Wall -I../include
+LD := i586-elf-ld
+LDFLAGS := -T linker.ld -o kernel.bin
+ASM := nasm
+ASMFLAGS := -f elf
 
-all: kernel.o boot.o
+all: kernel.bin
+
+kernel.bin: kernel.o boot.o screen.o asmisr.o gdt.o idt.o descriptors.o isr.o tools.o keyboard.o
 	$(LD) $(LDFLAGS) kernel.o boot.o screen.o asmisr.o gdt.o idt.o descriptors.o isr.o tools.o keyboard.o
 
-kernel.o: screen.o descriptors.o
+kernel.o: kernel/kernel.c
 	$(CC) $(CFLAGS) -o kernel.o kernel/kernel.c
 
-boot.o: kernel.o
+boot.o: boot/boot.asm
 	$(ASM) $(ASMFLAGS) -o boot.o boot/boot.asm
 
-gdt.o:
+gdt.o: kernel/gdt.asm
 	$(ASM) $(ASMFLAGS) -o gdt.o kernel/gdt.asm
 
-idt.o: isr.o
+idt.o: kernel/idt.asm
 	$(ASM) $(ASMFLAGS) -o idt.o kernel/idt.asm
 
-asmisr.o:
+asmisr.o: kernel/asmisr.asm
 	$(ASM) $(ASMFLAGS) -o asmisr.o kernel/asmisr.asm
 
-tools.o:
+tools.o: kernel/tools.c
 	$(CC) $(CFLAGS) -o tools.o kernel/tools.c
 
-descriptors.o: asmisr.o gdt.o idt.o tools.o isr.o keyboard.o
+descriptors.o: kernel/descriptors.c
 	$(CC) $(CFLAGS) -o descriptors.o kernel/descriptors.c
 
-screen.o: tools.o
+screen.o: kernel/screen.c
 	$(CC) $(CFLAGS) -o screen.o kernel/screen.c
 
-isr.o: tools.o
+isr.o: kernel/isr.c
 	$(CC) $(CFLAGS) -o isr.o kernel/isr.c
 
-keyboard.o:
+keyboard.o: kernel/keyboard.c
 	$(CC) $(CFLAGS) -o keyboard.o kernel/keyboard.c
 
 clean:
