@@ -21,6 +21,7 @@ void set_prompt(char *prompt) {
     prompt_length = 0;
     while (prompt[prompt_length]) {
         *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = prompt[prompt_length];
+        *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = 0x07;
         x++;
         prompt_length++;
     }
@@ -33,10 +34,12 @@ void screen_scroll() {
     // Shift all characters up by one line in video memory by copying data from the current line to the line above
     for (i = NUM_OF_SCROLL_BYTES; i < NUM_OF_BYTES(NUM_OF_CELLS_X, NUM_OF_CELLS_Y); i += 2) {
         *(vidmem + i - NUM_OF_SCROLL_BYTES) = *(vidmem + i);
+        *(vidmem + i - NUM_OF_SCROLL_BYTES + 1) = *(vidmem + i + 1);
     }
     // Clear the last line
     for (i = 0; i < NUM_OF_CELLS_X * 2; i += 2) {
         *(vidmem + (NUM_OF_CELLS_Y - 1) * NUM_OF_CELLS_X * 2 + i) = ' ';
+        *(vidmem + (NUM_OF_CELLS_Y - 1) * NUM_OF_CELLS_X * 2 + i + 1) = 0x07;
     }
     y--;
     prompt_y--;
@@ -54,6 +57,7 @@ void screen_print(char *string) {
             screen_scroll();
         if (string[i] > 0x1f && string[i] != 0x7f) { // Printable characters
             *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = string[i];
+            *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = 0x07;
             x++;
             if (x == NUM_OF_CELLS_X) {
                 x = 0;
@@ -62,36 +66,38 @@ void screen_print(char *string) {
         }
         else {
             switch (string[i]) {
-                case 0x08: // Backspace
-                    if (y != prompt_y || x > prompt_x + 1) {
-                        if (x != 0) {
-                            x--;
-                            *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = ' ';
-                        }
-                        else if (y > 2) {
-                            x = NUM_OF_CELLS_X - 1;
-                            y--;
-                            *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = ' ';
-                        }
+            case 0x08: // Backspace
+                if (y != prompt_y || x > prompt_x + 1) {
+                    if (x != 0) {
+                        x--;
+                        *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = ' ';
+                        *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = 0x07;
                     }
-                    break;
-
-                case 0x09: // Tab
-                    x += 4;
-                    if (x >= NUM_OF_CELLS_X) {
-                        x = 0;
-                        y++;
+                    else if (y > 2) {
+                        x = NUM_OF_CELLS_X - 1;
+                        y--;
+                        *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = ' ';
+                        *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = 0x07;
                     }
-                    break;
+                }
+                break;
 
-                case 0x0a: // Line feed (Enter key)
-                    handle_input();
+            case 0x09: // Tab
+                x += 4;
+                if (x >= NUM_OF_CELLS_X) {
                     x = 0;
                     y++;
-                    if (y == NUM_OF_CELLS_Y)
-                        screen_scroll();
-                    set_prompt("> ");
-                    break;
+                }
+                break;
+
+            case 0x0a: // Line feed (Enter key)
+                handle_input();
+                x = 0;
+                y++;
+                if (y == NUM_OF_CELLS_Y)
+                    screen_scroll();
+                set_prompt("> ");
+                break;
             }
         }
         i++;
