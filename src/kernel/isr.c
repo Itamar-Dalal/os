@@ -1,6 +1,5 @@
+#include "pch.h"
 #include "isr.h"
-#include "screen.h"
-#include "tools.h"
 
 #define PIC1_COMMAND 0x20
 #define PIC2_COMMAND 0xA0
@@ -31,6 +30,6 @@ void irq_handler(registers_t regs)
 }
 
 // Function for assigning a callback function to a specific IRQ
-void register_isr_callback(int irq, void (*callback)()) {
+void register_isr_callback(uint32_t irq, void (*callback)()) {
 	isr_callbacks[irq - IRQ0] = callback;
 }

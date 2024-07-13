@@ -1,12 +1,11 @@
-#include "screen.h"
-#include "tools.h"
+#include "pch.h"
 
-unsigned char *vidmem = (unsigned char *)0xb8000;
-unsigned char x = 0;
-unsigned char y = 0;
-unsigned int prompt_length = 0;
-unsigned char prompt_x = 0;
-unsigned char prompt_y = 0;
+uint8_t *vidmem = (uint8_t *)0xb8000;
+uint8_t x = 0;
+uint8_t y = 0;
+uint32_t prompt_length = 0;
+uint8_t prompt_x = 0;
+uint8_t prompt_y = 0;
 
 void screen_clear() {
     int i;
@@ -30,7 +29,7 @@ void set_prompt(char *prompt) {
 }
 
 void screen_scroll() {
-    int i;
+    size_t i;
     for (i = NUM_OF_SCROLL_BYTES; i < NUM_OF_BYTES(NUM_OF_CELLS_X, NUM_OF_CELLS_Y); i += 2) {
         *(vidmem + i - NUM_OF_SCROLL_BYTES) = *(vidmem + i);
     }
@@ -43,7 +42,7 @@ void handle_input() {
 }
 
 void screen_print(char *string) {
-    int i = 0;
+    size_t i = 0;
     while (string[i]) {
         if (y == NUM_OF_CELLS_Y) {
             screen_scroll();
@@ -92,7 +91,7 @@ void screen_print(char *string) {
     }
 }
 
-void screen_print_int(int num, int base) {
+void screen_print_int(int32_t num, uint32_t base) {
     char buff[100];
     itoa(num, buff, base);
     screen_print(buff);

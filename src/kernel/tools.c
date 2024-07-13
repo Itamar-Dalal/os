@@ -1,34 +1,36 @@
-#include "tools.h"
+#include "pch.h"
 
-// Write a byte out to the specified port.
-void outb(unsigned short port, unsigned char value)
+// Write a byte out to the specified port
+void outb(uint16_t port, uint8_t value)
 {
     asm volatile ("outb %1, %0" : : "dN" (port), "a" (value));
 }
 
-unsigned char inb(unsigned short port)
+// Read a byte from the specified port
+uint8_t inb(uint16_t port)
 {
-    unsigned char ret;
+    uint8_t ret;
     asm volatile("inb %1, %0" : "=a" (ret) : "dN" (port));
     return ret;
 }
 
-unsigned short inw(unsigned short port)
+// Read a word from the specified port
+uint16_t inw(uint16_t port)
 {
-    unsigned short ret;
+    uint16_t ret;
     asm volatile ("inw %1, %0" : "=a" (ret) : "dN" (port));
     return ret;
 }
 
 // Write len copies of val into dest.
-void memset_tool(unsigned char *dest, unsigned char val, unsigned int len)
+void memset_tool(uint8_t *dest, uint8_t val, uint32_t len)
 {
-    unsigned char *temp = (unsigned char *)dest;
+    uint8_t *temp = (uint8_t *)dest;
     for (; len != 0; len--) *temp++ = val;
 }
 
 // Convert int to ascii
-char *itoa(int value, char *str, int base) {
+char *itoa(int32_t value, char *str, uint32_t base) {
 	char *rc;
 	char *ptr;
 	char *low;

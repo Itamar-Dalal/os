@@ -18,14 +18,6 @@
 #define IRQ14 46
 #define IRQ15 47
 
-typedef struct registers
-{
-	unsigned int ds;
-	unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;
-	unsigned int int_no, err_code;
-	unsigned int eip, cs, eflags, useresp, ss;
-} registers_t;
-
-void register_isr_callback(int irq, void (*callback)());
+void register_isr_callback(uint32_t irq, void (*callback)());
 
 #endif
