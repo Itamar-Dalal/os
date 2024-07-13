@@ -30,10 +30,16 @@ void set_prompt(char *prompt) {
 
 void screen_scroll() {
     size_t i;
+    // Shift all characters up by one line in video memory by copying data from the current line to the line above
     for (i = NUM_OF_SCROLL_BYTES; i < NUM_OF_BYTES(NUM_OF_CELLS_X, NUM_OF_CELLS_Y); i += 2) {
         *(vidmem + i - NUM_OF_SCROLL_BYTES) = *(vidmem + i);
     }
+    // Clear the last line
+    for (i = 0; i < NUM_OF_CELLS_X * 2; i += 2) {
+        *(vidmem + (NUM_OF_CELLS_Y - 1) * NUM_OF_CELLS_X * 2 + i) = ' ';
+    }
     y--;
+    prompt_y--;
 }
 
 void handle_input() {
@@ -44,9 +50,8 @@ void handle_input() {
 void screen_print(char *string) {
     size_t i = 0;
     while (string[i]) {
-        if (y == NUM_OF_CELLS_Y) {
+        if (y == NUM_OF_CELLS_Y)
             screen_scroll();
-        }
         if (string[i] > 0x1f && string[i] != 0x7f) { // Printable characters
             *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = string[i];
             x++;
@@ -83,6 +88,8 @@ void screen_print(char *string) {
                     handle_input();
                     x = 0;
                     y++;
+                    if (y == NUM_OF_CELLS_Y)
+                        screen_scroll();
                     set_prompt("> ");
                     break;
             }
