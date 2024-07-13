@@ -8,6 +8,7 @@
 
 void screen_clear();
 void screen_print(char *);
+void set_prompt(char *);
 void screen_print_int(int, int);
 
 #endif
