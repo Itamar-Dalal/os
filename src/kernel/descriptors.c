@@ -313,9 +313,9 @@ void gdt_setup()
 	if (time >= 1000) { // 1 second
 		time %= 1000;
 		seconds++;
-		screen_print("Time: ");
-		screen_print_int(seconds, 10);
-		screen_print("s\n");
+		screen_print("Time: ", 0);
+		screen_print_int(seconds, 10, 0);
+		screen_print("s\n", 0);
 	}
 	time += 55; // PIT sends an interrupt every 55 milliseconds
 }*/

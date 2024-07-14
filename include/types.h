@@ -9,15 +9,17 @@ typedef signed char int8_t;
 typedef signed short int16_t;
 typedef signed int int32_t;
 
-#define true 1
-#define false 0
-typedef uint8_t bool;
-
 typedef uint32_t size_t;
 typedef int32_t ssize_t;
 
 typedef uint32_t physaddr_t; // Physical address
 typedef uint32_t virtaddr_t; // Virtual address
+
+#define true 1
+#define false 0
+typedef uint8_t bool;
+
+#define NULL ((void *)0)
 
 typedef struct {
 	uint16_t limit_low;

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#define DEFAULT_ATTR 0x07
+
 uint8_t *vidmem = (uint8_t *)0xb8000;
 uint8_t x = 0;
 uint8_t y = 0;
@@ -11,7 +13,7 @@ void screen_clear() {
     int i;
     for (i = 0; i < NUM_OF_BYTES(NUM_OF_CELLS_X, NUM_OF_CELLS_Y); i += 2) {
         *(vidmem + i) = 0x20;
-        *(vidmem + i + 1) = 0x07;
+        *(vidmem + i + 1) = DEFAULT_ATTR;
     }
     x = 0;
     y = 0;
@@ -27,11 +29,13 @@ void set_cursor(uint8_t x, uint8_t y) {
     outb(0x3D5, pos & 0xFF);
 }
 
-void set_prompt(char *prompt) {
+void set_prompt(char *prompt, uint8_t attr) {
+    if (attr == 0)
+        attr = DEFAULT_ATTR;
     prompt_length = 0;
     while (prompt[prompt_length]) {
         *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = prompt[prompt_length];
-        *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = 0x07;
+        *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = attr;
         x++;
         prompt_length++;
     }
@@ -49,7 +53,7 @@ void screen_scroll() {
     // Clear the last line
     for (i = 0; i < NUM_OF_CELLS_X * 2; i += 2) {
         *(vidmem + (NUM_OF_CELLS_Y - 1) * NUM_OF_CELLS_X * 2 + i) = ' ';
-        *(vidmem + (NUM_OF_CELLS_Y - 1) * NUM_OF_CELLS_X * 2 + i + 1) = 0x07;
+        *(vidmem + (NUM_OF_CELLS_Y - 1) * NUM_OF_CELLS_X * 2 + i + 1) = DEFAULT_ATTR;
     }
     y--;
     prompt_y--;
@@ -60,14 +64,16 @@ void handle_input() {
     // Currently, it does nothing
 }
 
-void screen_print(char *string) {
+void screen_print(char *string, uint8_t attr) {
+    if (attr == 0)
+        attr = DEFAULT_ATTR; // Defult attribute
     size_t i = 0;
     while (string[i]) {
         if (y == NUM_OF_CELLS_Y)
             screen_scroll();
         if (string[i] > 0x1f && string[i] != 0x7f) { // Printable characters
             *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = string[i];
-            *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = 0x07;
+            *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = attr;
             x++;
             if (x == NUM_OF_CELLS_X) {
                 x = 0;
@@ -81,13 +87,13 @@ void screen_print(char *string) {
                     if (x != 0) {
                         x--;
                         *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = ' ';
-                        *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = 0x07;
+                        *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = attr;
                     }
                     else if (y > 2) {
                         x = NUM_OF_CELLS_X - 1;
                         y--;
                         *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = ' ';
-                        *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = 0x07;
+                        *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = attr;
                     }
                 }
                 break;
@@ -106,7 +112,7 @@ void screen_print(char *string) {
                 y++;
                 if (y == NUM_OF_CELLS_Y)
                     screen_scroll();
-                set_prompt("> ");
+                set_prompt("> ", 0);
                 break;
             }
         }
@@ -115,8 +121,10 @@ void screen_print(char *string) {
     }
 }
 
-void screen_print_int(int32_t num, uint32_t base) {
+void screen_print_int(int32_t num, uint32_t base, uint8_t attr) {
+    if (attr == 0)
+        attr = DEFAULT_ATTR;
     char buff[100];
     itoa(num, buff, base);
-    screen_print(buff);
+    screen_print(buff, attr);
 }

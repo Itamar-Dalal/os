@@ -72,5 +72,5 @@ void keyboard_interrupt_handler() {
 			ascii -= 32; // Convert to uppercase if Caps Lock is active
 		}
 	}
-	screen_print(&ascii);
+	screen_print(&ascii, 0);
 }

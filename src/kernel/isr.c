@@ -8,9 +8,9 @@
 void (*isr_callbacks[16])();
 
 void isr_handler(registers_t regs) {
-	//screen_print("Recieved interrupt: ");
-	//screen_print_int(regs.int_no, 16);
-	//screen_print("\n");
+	//screen_print("Recieved interrupt: ", 0);
+	//screen_print_int(regs.int_no, 16, 0);
+	//screen_print("\n", 0);
 }
 
 void irq_handler(registers_t regs)
@@ -23,9 +23,9 @@ void irq_handler(registers_t regs)
 		(*isr_callbacks[regs.int_no - IRQ0])();
 	}
 	else {
-		//screen_print("Recieved IRQ: ");
-		//screen_print_int(regs.int_no, 16);
-		//screen_print("\n");
+		//screen_print("Recieved IRQ: ", 0);
+		//screen_print_int(regs.int_no, 16, 0);
+		//screen_print("\n", 0);
 	}
 }
 
