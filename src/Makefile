@@ -1,5 +1,5 @@
 CC := i586-elf-gcc
-CFLAGS := -c -Wall -I../include
+CFLAGS := -c -Wall -I../include 
 LD := i586-elf-ld
 LDFLAGS := -T linker.ld -o kernel.bin
 ASM := nasm

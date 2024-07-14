@@ -1,34 +1,33 @@
 global loader
- 
 extern kmain
 
 MODULEALIGN equ  1<<0
 MEMINFO     equ  1<<1
 FLAGS       equ  MODULEALIGN | MEMINFO
-MAGIC       equ    0x1BADB002
+MAGIC       equ  0x1BADB002
 CHECKSUM    equ -(MAGIC + FLAGS) ; For error detection
- 
+
 section .text
- 
+
 align 4 ; Multiboot standard
     dd MAGIC
     dd FLAGS
     dd CHECKSUM
 
 STACKSIZE equ 0x4000
- 
+
 loader:
-	; cdecl implementation
-	mov  esp, stack + STACKSIZE
-	push eax
-	push ebx
-	
-	call kmain
-	
-	cli
-	.hang:
-    		hlt
-    		jmp  .hang
+    ; cdecl implementation
+    mov  esp, stack + STACKSIZE
+    push eax
+    push ebx
+    
+    call kmain
+    
+    cli
+.hang:
+    hlt
+    jmp  .hang
 
 section .bss
 
