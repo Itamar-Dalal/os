@@ -1,13 +1,12 @@
 #include "pch.h"
 
 // Write a byte out to the specified port
-void outb(uint16_t port, uint8_t value)
-{
+inline void outb(uint16_t port, uint8_t value){
     asm volatile ("outb %1, %0" : : "dN" (port), "a" (value));
 }
 
 // Read a byte from the specified port
-uint8_t inb(uint16_t port)
+inline uint8_t inb(uint16_t port)
 {
     uint8_t ret;
     asm volatile("inb %1, %0" : "=a" (ret) : "dN" (port));
@@ -15,7 +14,7 @@ uint8_t inb(uint16_t port)
 }
 
 // Read a word from the specified port
-uint16_t inw(uint16_t port)
+inline uint16_t inw(uint16_t port)
 {
     uint16_t ret;
     asm volatile ("inw %1, %0" : "=a" (ret) : "dN" (port));
@@ -23,7 +22,7 @@ uint16_t inw(uint16_t port)
 }
 
 // Write len copies of val into dest.
-void memset_tool(uint8_t *dest, uint8_t val, uint32_t len)
+inline void memset_tool(uint8_t *dest, uint8_t val, uint32_t len)
 {
     uint8_t *temp = (uint8_t *)dest;
     for (; len != 0; len--) *temp++ = val;

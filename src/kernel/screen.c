@@ -17,6 +17,16 @@ void screen_clear() {
     y = 0;
 }
 
+void set_cursor(uint8_t x, uint8_t y) {
+    uint16_t pos = y * NUM_OF_CELLS_X + x;
+    // Send the high byte of the cursor position to VGA port
+    outb(0x3D4, 0x0E);
+    outb(0x3D5, (pos >> 8) & 0xFF);
+    // Send the low byte of the cursor position to VGA port
+    outb(0x3D4, 0x0F);
+    outb(0x3D5, pos & 0xFF);
+}
+
 void set_prompt(char *prompt) {
     prompt_length = 0;
     while (prompt[prompt_length]) {
@@ -101,6 +111,7 @@ void screen_print(char *string) {
             }
         }
         i++;
+        set_cursor(x, y);
     }
 }
 

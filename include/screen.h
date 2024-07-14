@@ -9,6 +9,6 @@
 void screen_clear();
 void screen_print(char *);
 void set_prompt(char *);
-void screen_print_int(int32_t, uint32_t);
+void screen_print_int(int32_t num, uint32_t base);
 
 #endif
