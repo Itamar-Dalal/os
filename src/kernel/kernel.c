@@ -47,7 +47,7 @@ int kmain(void *mbd, uint32_t magic) {
         screen_print("Invalid multiboot header.\n", 0);
         return -1;
     }
-    screen_print("------------------------- OS developed by Itamar Dalal -------------------------\n", 0x1E);
+    screen_print("------------------------- OS developed by Itamar Dalal -------------------------\n", 0xF0);
     //screen_print("Setting up the GDT.\n", 0);
     gdt_setup();
     //screen_print("GDT set.\n", 0);
