@@ -82,7 +82,7 @@ void screen_print(char *string, uint8_t attr) {
         }
         else {
             switch (string[i]) {
-            case 0x08: // Backspace
+            case '\b': // Backspace
                 if (y != prompt_y || x > prompt_x + 1) {
                     if (x != 0) {
                         x--;
@@ -98,7 +98,7 @@ void screen_print(char *string, uint8_t attr) {
                 }
                 break;
 
-            case 0x09: // Tab
+            case '\t': // Tab
                 x += 4;
                 if (x >= NUM_OF_CELLS_X) {
                     x = 0;
@@ -106,7 +106,7 @@ void screen_print(char *string, uint8_t attr) {
                 }
                 break;
 
-            case 0x0a: // Line feed (Enter key)
+            case '\n': // Line feed (Enter key)
                 handle_input();
                 x = 0;
                 y++;
