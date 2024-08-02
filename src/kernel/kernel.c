@@ -24,7 +24,6 @@ int kmain(void *mbd, uint32_t magic) {
     //__asm__("int $0x00");
     //__asm__("int $0x80");
     //__asm__("int $0x23");
-    example1();
     while (true) {;}
     return 0;
 }
