@@ -6,6 +6,9 @@
 #define TOTAL_BLOCKS (total_memory / BLOCK_SIZE)
 #define MEMORY_MAP_SIZE (TOTAL_BLOCKS / 8)
 
+#define NUM_OF_PAGES 1024
+#define NUM_OF_PAGE_TABLES 1024
+
 extern uint32_t end; // Defined by the linker
 uint32_t placement_address = (uint32_t)&end;
 
@@ -15,15 +18,14 @@ void *kmalloc(size_t size) {
 		size &= ~0x3;
 		size += 4;
 	}
-
 	// Save the current placement address
 	uint32_t addr = placement_address;
 	placement_address += size;
-
 	// Return the old placement address
 	return (void *)addr;
 }
 
+// PMM implementation
 uint8_t *memory_map; // Bitmap data structure, each bit represents a block of memory
 
 void pmm_init() {
@@ -53,3 +55,25 @@ void pmm_free_block(void *ptr) {
 	size_t bit_index = block_index % 8;
 	memory_map[byte_index] &= ~(1 << bit_index); // Free the block bit (0)
 }
+
+// VMM implementation
+// For more info: https://wiki.osdev.org/Paging
+typedef struct {
+	uint32_t present : 1;
+	uint32_t rw : 1;
+	uint32_t user : 1;
+	uint32_t accessed : 1;
+	uint32_t dirty : 1;
+	uint32_t unused : 7;
+	uint32_t frame : 20; // 20 and not 32 bits because the other 12 bits are used as the offset
+} page_table_entry_t;
+
+typedef struct {
+	page_table_entry_t pages[NUM_OF_PAGES];
+} page_table_t;
+
+typedef struct {
+	page_table_t *tables[NUM_OF_PAGE_TABLES]; // Array of pointers to page tables
+	physaddr_t tablesPhysical[NUM_OF_PAGE_TABLES]; // Array that holds the physical address of the corresponding page table
+	physaddr_t physicalAddr; // The physical address of the page directory
+} page_directory_t;

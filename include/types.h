@@ -14,6 +14,7 @@ typedef int32_t ssize_t;
 
 typedef uint32_t physaddr_t; // Physical address
 typedef uint32_t virtaddr_t; // Virtual address
+typedef uint32_t uintptr_t;
 
 #define true 1
 #define false 0
