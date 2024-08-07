@@ -2,10 +2,11 @@
 #include "memory.h"
 #include "multiboot_info.h"
 
-#define BLOCK_SIZE 4096 // 4KB
+#define BLOCK_SIZE 0x1000 // 4KB
 #define TOTAL_BLOCKS (total_memory / BLOCK_SIZE)
 #define MEMORY_MAP_SIZE (TOTAL_BLOCKS / 8)
 
+#define PAGE_SIZE 0x1000 // 4KB
 #define NUM_OF_PAGES 1024
 #define NUM_OF_PAGE_TABLES 1024
 
@@ -22,6 +23,17 @@ void *kmalloc(size_t size) {
 	uint32_t addr = placement_address;
 	placement_address += size;
 	// Return the old placement address
+	return (void *)addr;
+}
+
+void *kmalloc_a(size_t size) {
+	// Align the placement_address to PAGE_SIZE
+	if (placement_address & (PAGE_SIZE - 1)) {
+		placement_address &= ~(PAGE_SIZE - 1);
+		placement_address += PAGE_SIZE;
+	}
+	uint32_t addr = placement_address;
+	placement_address += size;
 	return (void *)addr;
 }
 
@@ -66,10 +78,10 @@ typedef struct {
 	uint32_t dirty : 1;
 	uint32_t unused : 7;
 	uint32_t frame : 20; // 20 and not 32 bits because the other 12 bits are used as the offset
-} page_table_entry_t;
+} page_t;
 
 typedef struct {
-	page_table_entry_t pages[NUM_OF_PAGES];
+	page_t pages[NUM_OF_PAGES];
 } page_table_t;
 
 typedef struct {
@@ -77,3 +89,35 @@ typedef struct {
 	physaddr_t tablesPhysical[NUM_OF_PAGE_TABLES]; // Array that holds the physical address of the corresponding page table
 	physaddr_t physicalAddr; // The physical address of the page directory
 } page_directory_t;
+
+page_directory_t *kernel_directory;
+page_directory_t *current_directory;
+
+void vmm_init() {
+	kernel_directory = (page_directory_t *)kmalloc_a(sizeof(page_directory_t));
+	memset_tool(kernel_directory, 0, sizeof(page_directory_t));
+	current_directory = kernel_directory;
+}
+
+void switch_page_directory(page_directory_t *dir) {
+	current_directory = dir;
+	// Change the CR3 register to hold the value of the new page directory
+	asm volatile("mov %0, %%cr3":: "r"(dir->physicalAddr));
+}
+
+void enable_paging() {
+	uint32_t cr0;
+	asm volatile("mov %%cr0, %0":: "=r"(cr0));
+	cr0 |= 0x80000000; // Enable paging
+	asm volatile("mov %0, %%cr0":: "r"(cr0));
+}
+
+page_t *get_page(virtaddr_t addr, bool make_new_page, page_directory_t *dir) {
+	// Divide by page size (4 KB) to get the page number
+	addr /= PAGE_SIZE;
+	/* Divide the page number by the number of pages in the page table
+	   to get the index of the page table in the page directory */
+	size_t table_index = addr / NUM_OF_PAGES;
+	// in progress
+
+}
