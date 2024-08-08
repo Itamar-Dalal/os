@@ -7,11 +7,11 @@
 #define MEMORY_MAP_SIZE (TOTAL_BLOCKS / 8)
 
 #define PAGE_SIZE 0x1000 // 4KB
-#define NUM_OF_PAGES 1024
+#define NUM_OF_PAGES_IN_TABLE 1024
 #define NUM_OF_PAGE_TABLES 1024
 
-extern uint32_t end; // Defined by the linker
-uint32_t placement_address = (uint32_t)&end;
+extern virtaddr_t end; // Defined by the linker
+virtaddr_t placement_address = (virtaddr_t)&end;
 
 void *kmalloc(size_t size) {
 	// Align the size to the nearest multiple of 4
@@ -20,19 +20,34 @@ void *kmalloc(size_t size) {
 		size += 4;
 	}
 	// Save the current placement address
-	uint32_t addr = placement_address;
+	virtaddr_t addr = placement_address;
 	placement_address += size;
 	// Return the old placement address
 	return (void *)addr;
 }
 
+// Allocates memory that is aligned to a page boundary
 void *kmalloc_a(size_t size) {
 	// Align the placement_address to PAGE_SIZE
 	if (placement_address & (PAGE_SIZE - 1)) {
 		placement_address &= ~(PAGE_SIZE - 1);
 		placement_address += PAGE_SIZE;
 	}
-	uint32_t addr = placement_address;
+	virtaddr_t addr = placement_address;
+	placement_address += size;
+	return (void *)addr;
+}
+
+// Allocates memory that is aligned to a page boundary 
+// and provides the physical address of the allocated memory
+void *kmalloc_ap(size_t size, physaddr_t *phys_addr) {
+	if (placement_address & (PAGE_SIZE - 1)) {
+		placement_address &= ~(PAGE_SIZE - 1);
+		placement_address += PAGE_SIZE;
+	}
+	virtaddr_t addr = placement_address;
+	if (phys_addr)
+		*phys_addr = addr; // 1:1 mapping (identity mapping)
 	placement_address += size;
 	return (void *)addr;
 }
@@ -81,7 +96,7 @@ typedef struct {
 } page_t;
 
 typedef struct {
-	page_t pages[NUM_OF_PAGES];
+	page_t pages[NUM_OF_PAGES_IN_TABLE];
 } page_table_t;
 
 typedef struct {
@@ -112,12 +127,21 @@ void enable_paging() {
 	asm volatile("mov %0, %%cr0":: "r"(cr0));
 }
 
-page_t *get_page(virtaddr_t addr, bool make_new_page, page_directory_t *dir) {
+page_t *get_page(virtaddr_t addr, bool new_page_table, page_directory_t *dir) {
 	// Divide by page size (4 KB) to get the page number
 	addr /= PAGE_SIZE;
 	/* Divide the page number by the number of pages in the page table
 	   to get the index of the page table in the page directory */
-	size_t table_index = addr / NUM_OF_PAGES;
-	// in progress
-
+	size_t table_index = addr / NUM_OF_PAGES_IN_TABLE;
+	if (dir->tables[table_index]) // Check if the page table exists
+		return &(dir->tables[table_index]->pages[addr % NUM_OF_PAGES_IN_TABLE]); // Modulo to get the index of the page in the page table
+	else if (new_page_table) {
+		physaddr_t tmp; // Holds the physical address of the allocated page table
+		dir->tables[table_index] = (page_table_t *)kmalloc_ap(sizeof(page_table_t), &tmp);
+		memset_tool(dir->tables[table_index], 0, NUM_OF_PAGES_IN_TABLE * sizeof(page_t));
+		dir->tablesPhysical[table_index] = tmp | 0x7; // Present, RW, US
+		return &(dir->tables[table_index]->pages[addr % NUM_OF_PAGES_IN_TABLE]);
+	}
+	else 
+		return NULL;
 }
