@@ -150,7 +150,7 @@ void alloc_frame(page_t *page, bool is_kernel, bool is_writeable) {
 	if (page->frame != 0)
 		return;
 	physaddr_t addr = (physaddr_t)pmm_alloc_block();
-	if (addr == NULL) {
+	if (addr == 0) {
 		screen_print("Error: can not allocate new frame (no free frames)", 0);
 		return;
 	}
@@ -159,4 +159,3 @@ void alloc_frame(page_t *page, bool is_kernel, bool is_writeable) {
 	page->user = !is_kernel;
 	page->frame = addr / 0x1000; // To get only the upper 20 bits
 }
-
