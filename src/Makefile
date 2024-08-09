@@ -1,5 +1,5 @@
 CC := i586-elf-gcc
-CFLAGS := -c -Wall -I../include 
+CFLAGS := -c -Wall -I../include
 LD := i586-elf-ld
 LDFLAGS := -T linker.ld -o kernel.bin
 ASM := nasm
@@ -7,8 +7,8 @@ ASMFLAGS := -f elf
 
 all: kernel.bin
 
-kernel.bin: kernel.o boot.o screen.o asmisr.o gdt.o idt.o descriptors.o isr.o tools.o keyboard.o memory.o multiboot_info.o
-	$(LD) $(LDFLAGS) kernel.o boot.o screen.o asmisr.o gdt.o idt.o descriptors.o isr.o tools.o keyboard.o memory.o multiboot_info.o
+kernel.bin: kernel.o boot.o screen.o asmisr.o gdt.o idt.o descriptors.o isr.o tools.o keyboard.o memory.o multiboot_info.o paging.o
+	$(LD) $(LDFLAGS) -o kernel.bin kernel.o boot.o screen.o asmisr.o gdt.o idt.o descriptors.o isr.o tools.o keyboard.o memory.o multiboot_info.o paging.o
 
 kernel.o: kernel/kernel.c
 	$(CC) $(CFLAGS) -o kernel.o kernel/kernel.c
@@ -45,6 +45,9 @@ memory.o: kernel/memory.c
 
 multiboot_info.o: kernel/multiboot_info.c
 	$(CC) $(CFLAGS) -o multiboot_info.o kernel/multiboot_info.c
+
+paging.o: kernel/paging.asm
+	$(ASM) $(ASMFLAGS) -o paging.o kernel/paging.asm
 
 clean:
 	rm -rf *.o kernel.bin

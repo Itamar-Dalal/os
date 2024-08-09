@@ -8,25 +8,12 @@ virtaddr_t placement_address = (virtaddr_t)&end;
 void *kmalloc(size_t size) {
 	// Align the size to the nearest multiple of 4
 	if (size % 4 != 0) {
-		size &= ~0x3;
-		size += 4;
+		size = (size + 3) & ~0x3;
 	}
 	// Save the current placement address
 	virtaddr_t addr = placement_address;
 	placement_address += size;
 	// Return the old placement address
-	return (void *)addr;
-}
-
-// Allocates memory that is aligned to a page boundary
-void *kmalloc_a(size_t size) {
-	// Align the placement_address to PAGE_SIZE
-	if (placement_address & (PAGE_SIZE - 1)) {
-		placement_address &= ~(PAGE_SIZE - 1);
-		placement_address += PAGE_SIZE;
-	}
-	virtaddr_t addr = placement_address;
-	placement_address += size;
 	return (void *)addr;
 }
 
@@ -77,58 +64,49 @@ void pmm_free_block(void *ptr) {
 
 // VMM implementation
 // For more info: https://wiki.osdev.org/Paging
-page_directory_t *kernel_directory;
-page_directory_t *current_directory;
 
-void vmm_init() {
-	kernel_directory = (page_directory_t *)kmalloc_a(sizeof(page_directory_t));
-	memset_tool((uint8_t *)kernel_directory, 0, sizeof(page_directory_t));
-	switch_page_directory(kernel_directory);
-	enable_paging();
-}
+virtaddr_t *page_directory __attribute__((aligned(PAGE_SIZE)));
+virtaddr_t *page_tables[NUM_OF_PAGE_TABLES] __attribute__((aligned(PAGE_SIZE)));
 
-void switch_page_directory(page_directory_t *dir) {
-	current_directory = dir;
-	// Change the CR3 register to hold the value of the new page directory
-	asm volatile("mov %0, %%cr3":: "r"(dir->physicalAddr));
-}
+// Function prototypes for assembly routines
+extern void loadPageDirectory(physaddr_t *);
+extern void enablePaging();
 
-void enable_paging() {
-	uint32_t cr0;
-	asm volatile("mov %%cr0, %0" : "=r"(cr0));
-	cr0 |= 0x80000000; // Enable paging
-	asm volatile("mov %0, %%cr0" :: "r"(cr0));
-}
+void init_vmm() {
+	// Allocate space for the page directory
+	page_directory = (virtaddr_t *)kmalloc_ap(NUM_OF_PAGE_TABLES * sizeof(virtaddr_t), NULL);
+	memset_tool((uint8_t *)page_directory, 0, NUM_OF_PAGE_TABLES * sizeof(virtaddr_t));
 
-page_t *get_page(virtaddr_t addr, bool new_page_table, page_directory_t *dir) {
-	// Divide by page size (4 KB) to get the page number
-	addr /= PAGE_SIZE;
-	/* Divide the page number by the number of pages in the page table
-	   to get the index of the page table in the page directory */
-	size_t table_index = addr / NUM_OF_PAGES_IN_TABLE;
-	if (dir->tables[table_index]) // Check if the page table exists
-		return &(dir->tables[table_index]->pages[addr % NUM_OF_PAGES_IN_TABLE]); // Modulo to get the index of the page in the page table
-	else if (new_page_table) {
-		physaddr_t tmp; // Holds the physical address of the allocated page table
-		dir->tables[table_index] = (page_table_t *)kmalloc_ap(sizeof(page_table_t), &tmp);
-		memset_tool((uint8_t *)dir->tables[table_index], 0, NUM_OF_PAGES_IN_TABLE * sizeof(page_t));
-		dir->tablesPhysical[table_index] = tmp | 0x7; // Present, RW, US
-		return &(dir->tables[table_index]->pages[addr % NUM_OF_PAGES_IN_TABLE]);
+	// Map memory for the kernel (from 0x00000000 to &end)
+	virtaddr_t kernel_end_addr = (virtaddr_t)&end;
+	uint32_t num_kernel_pages = (kernel_end_addr + PAGE_SIZE - 1) / PAGE_SIZE;
+
+	for (size_t i = 0; i < (num_kernel_pages / NUM_OF_PAGES_IN_TABLE) + 1; i++) {
+		page_tables[i] = (virtaddr_t *)kmalloc_ap(NUM_OF_PAGES_IN_TABLE * sizeof(virtaddr_t), NULL);
+		for (size_t j = 0; j < NUM_OF_PAGES_IN_TABLE; j++) {
+			physaddr_t page_addr = (i * NUM_OF_PAGES_IN_TABLE + j) * PAGE_SIZE;
+			if (page_addr >= kernel_end_addr) {
+				break;
+			}
+			page_tables[i][j] = page_addr | 3; // Present, read/write
+		}
+		page_directory[i] = ((physaddr_t)page_tables[i]) | 3; // Present, read/write
 	}
-	else 
-		return NULL;
-}
 
-void alloc_frame(page_t *page, bool is_kernel, bool is_writeable) {
-	if (page->frame != 0)
-		return;
-	physaddr_t addr = (physaddr_t)pmm_alloc_block();
-	if (addr == 0) {
-		screen_print("Error: can not allocate new frame (no free frames)", 0);
-		return;
+	// Identity mapping for kernel space (assumes kernel virtual addresses start at 0xC0000000)
+	for (size_t i = 768; i < 768 + (num_kernel_pages / NUM_OF_PAGES_IN_TABLE) + 1; i++) {
+		page_tables[i] = (virtaddr_t *)kmalloc_ap(NUM_OF_PAGES_IN_TABLE * sizeof(virtaddr_t), NULL);
+		for (size_t j = 0; j < NUM_OF_PAGES_IN_TABLE; j++) {
+			physaddr_t page_addr = ((i - 768) * NUM_OF_PAGES_IN_TABLE + j) * PAGE_SIZE;
+			if (page_addr >= kernel_end_addr) {
+				break;
+			}
+			page_tables[i][j] = page_addr | 3; // Present, read/write
+		}
+		page_directory[i] = ((physaddr_t)page_tables[i]) | 3; // Present, read/write
 	}
-	page->present = 1;
-	page->rw = is_writeable;
-	page->user = !is_kernel;
-	page->frame = addr / 0x1000; // To get only the upper 20 bits
+
+	// Load the page directory into CR3 and enable paging
+	loadPageDirectory((physaddr_t *)page_directory);
+	enablePaging();
 }

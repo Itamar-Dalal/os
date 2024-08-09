@@ -3,7 +3,6 @@
 #include "multiboot_info.h"
 #include "memory.h"
 
-
 int kmain(void *mbd, uint32_t magic) {
     screen_clear();
     if (magic != 0x2BADB002) {
@@ -60,6 +59,10 @@ int kmain(void *mbd, uint32_t magic) {
         screen_print("\n", 0);
     }
 
+    // Test Virtual Memory Management (VMM)
+    init_vmm();
+    screen_print("Yay", 0);
+    
     while (true) {;}
     return 0;
 }
