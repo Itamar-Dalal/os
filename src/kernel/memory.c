@@ -2,14 +2,6 @@
 #include "memory.h"
 #include "multiboot_info.h"
 
-#define BLOCK_SIZE 0x1000 // 4KB
-#define TOTAL_BLOCKS (total_memory / BLOCK_SIZE)
-#define MEMORY_MAP_SIZE (TOTAL_BLOCKS / 8)
-
-#define PAGE_SIZE 0x1000 // 4KB
-#define NUM_OF_PAGES_IN_TABLE 1024
-#define NUM_OF_PAGE_TABLES 1024
-
 extern virtaddr_t end; // Defined by the linker
 virtaddr_t placement_address = (virtaddr_t)&end;
 
@@ -85,33 +77,14 @@ void pmm_free_block(void *ptr) {
 
 // VMM implementation
 // For more info: https://wiki.osdev.org/Paging
-typedef struct {
-	uint32_t present : 1;
-	uint32_t rw : 1;
-	uint32_t user : 1;
-	uint32_t accessed : 1;
-	uint32_t dirty : 1;
-	uint32_t unused : 7;
-	uint32_t frame : 20; // 20 and not 32 bits because the other 12 bits are used as the offset
-} page_t;
-
-typedef struct {
-	page_t pages[NUM_OF_PAGES_IN_TABLE];
-} page_table_t;
-
-typedef struct {
-	page_table_t *tables[NUM_OF_PAGE_TABLES]; // Array of pointers to page tables
-	physaddr_t tablesPhysical[NUM_OF_PAGE_TABLES]; // Array that holds the physical address of the corresponding page table
-	physaddr_t physicalAddr; // The physical address of the page directory
-} page_directory_t;
-
 page_directory_t *kernel_directory;
 page_directory_t *current_directory;
 
 void vmm_init() {
 	kernel_directory = (page_directory_t *)kmalloc_a(sizeof(page_directory_t));
-	memset_tool(kernel_directory, 0, sizeof(page_directory_t));
-	current_directory = kernel_directory;
+	memset_tool((uint8_t *)kernel_directory, 0, sizeof(page_directory_t));
+	switch_page_directory(kernel_directory);
+	enable_paging();
 }
 
 void switch_page_directory(page_directory_t *dir) {
@@ -122,9 +95,9 @@ void switch_page_directory(page_directory_t *dir) {
 
 void enable_paging() {
 	uint32_t cr0;
-	asm volatile("mov %%cr0, %0":: "=r"(cr0));
+	asm volatile("mov %%cr0, %0" : "=r"(cr0));
 	cr0 |= 0x80000000; // Enable paging
-	asm volatile("mov %0, %%cr0":: "r"(cr0));
+	asm volatile("mov %0, %%cr0" :: "r"(cr0));
 }
 
 page_t *get_page(virtaddr_t addr, bool new_page_table, page_directory_t *dir) {
@@ -138,7 +111,7 @@ page_t *get_page(virtaddr_t addr, bool new_page_table, page_directory_t *dir) {
 	else if (new_page_table) {
 		physaddr_t tmp; // Holds the physical address of the allocated page table
 		dir->tables[table_index] = (page_table_t *)kmalloc_ap(sizeof(page_table_t), &tmp);
-		memset_tool(dir->tables[table_index], 0, NUM_OF_PAGES_IN_TABLE * sizeof(page_t));
+		memset_tool((uint8_t *)dir->tables[table_index], 0, NUM_OF_PAGES_IN_TABLE * sizeof(page_t));
 		dir->tablesPhysical[table_index] = tmp | 0x7; // Present, RW, US
 		return &(dir->tables[table_index]->pages[addr % NUM_OF_PAGES_IN_TABLE]);
 	}
