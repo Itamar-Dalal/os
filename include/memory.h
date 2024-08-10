@@ -13,6 +13,9 @@ void pmm_free_block(void *ptr);
 #define NUM_OF_PAGES_IN_TABLE 1024
 #define NUM_OF_PAGE_TABLES 1024
 
+#define KERNEL_START_VADDR 0xC0000000  // Kernel starts at 3GB
+#define KERNEL_PAGE_DIRECTORY_INDEX (KERNEL_START_VADDR / (PAGE_SIZE * NUM_OF_PAGES_IN_TABLE))
+
 void init_vmm();
 
 #endif

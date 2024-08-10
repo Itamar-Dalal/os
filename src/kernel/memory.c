@@ -68,7 +68,7 @@ void pmm_free_block(void *ptr) {
 virtaddr_t *page_directory __attribute__((aligned(PAGE_SIZE)));
 virtaddr_t *page_tables[NUM_OF_PAGE_TABLES] __attribute__((aligned(PAGE_SIZE)));
 
-// Function prototypes for assembly routines
+// Source: paging.asm
 extern void loadPageDirectory(physaddr_t *);
 extern void enablePaging();
 
@@ -77,7 +77,9 @@ void init_vmm() {
 	page_directory = (virtaddr_t *)kmalloc_ap(NUM_OF_PAGE_TABLES * sizeof(virtaddr_t), NULL);
 	memset_tool((uint8_t *)page_directory, 0, NUM_OF_PAGE_TABLES * sizeof(virtaddr_t));
 
-	// Map memory for the kernel (from 0x00000000 to &end)
+	// Map memory for the kernel (from 0x00000000 to &end).
+	// This part of the code Maps the kernel's physical memory directly to
+	// virtual addresses at the beginning of the address space
 	virtaddr_t kernel_end_addr = (virtaddr_t)&end;
 	uint32_t num_kernel_pages = (kernel_end_addr + PAGE_SIZE - 1) / PAGE_SIZE;
 
@@ -85,22 +87,23 @@ void init_vmm() {
 		page_tables[i] = (virtaddr_t *)kmalloc_ap(NUM_OF_PAGES_IN_TABLE * sizeof(virtaddr_t), NULL);
 		for (size_t j = 0; j < NUM_OF_PAGES_IN_TABLE; j++) {
 			physaddr_t page_addr = (i * NUM_OF_PAGES_IN_TABLE + j) * PAGE_SIZE;
-			if (page_addr >= kernel_end_addr) {
+			if (page_addr >= kernel_end_addr)
 				break;
-			}
 			page_tables[i][j] = page_addr | 3; // Present, read/write
 		}
 		page_directory[i] = ((physaddr_t)page_tables[i]) | 3; // Present, read/write
 	}
 
-	// Identity mapping for kernel space (assumes kernel virtual addresses start at 0xC0000000)
-	for (size_t i = 768; i < 768 + (num_kernel_pages / NUM_OF_PAGES_IN_TABLE) + 1; i++) {
+	// Identity mapping for kernel space (assumes kernel virtual addresses start at 0xC0000000).
+	// This part of the code Maps the same kernel's physical memory to a higher
+	// virtual address space (0xC0000000) to protect it from user-space applications 
+	// and to maintain a separation between user and kernel space
+	for (size_t i = KERNEL_PAGE_DIRECTORY_INDEX; i < KERNEL_PAGE_DIRECTORY_INDEX + (num_kernel_pages / NUM_OF_PAGES_IN_TABLE) + 1; i++) {
 		page_tables[i] = (virtaddr_t *)kmalloc_ap(NUM_OF_PAGES_IN_TABLE * sizeof(virtaddr_t), NULL);
 		for (size_t j = 0; j < NUM_OF_PAGES_IN_TABLE; j++) {
-			physaddr_t page_addr = ((i - 768) * NUM_OF_PAGES_IN_TABLE + j) * PAGE_SIZE;
-			if (page_addr >= kernel_end_addr) {
+			physaddr_t page_addr = ((i - KERNEL_PAGE_DIRECTORY_INDEX) * NUM_OF_PAGES_IN_TABLE + j) * PAGE_SIZE;
+			if (page_addr >= kernel_end_addr)
 				break;
-			}
 			page_tables[i][j] = page_addr | 3; // Present, read/write
 		}
 		page_directory[i] = ((physaddr_t)page_tables[i]) | 3; // Present, read/write
