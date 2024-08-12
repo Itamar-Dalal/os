@@ -80,9 +80,10 @@ void vmm_init() {
         return;
     memset_tool(table, 0, sizeof(page_table));
     uint32_t page = (1 << 0); // Present bit
+    // Low memory mapping (for example: video memory, BDA - BIOS data area and more)
     for (int i = 0, frame = 0x0; i < NUM_OF_PAGES_IN_TABLE; i++, frame += PAGE_SIZE)
         table2->m_entries[i] = page | (frame & ~0xFFF); // "& ~0xFFF" clears the lower 12 bits
-
+    // Kernel memory mapping (GRUB loads the kernel at the physical address 0x100000 - 1MB)
     for (int i = 0, frame = 0x100000; i < NUM_OF_PAGES_IN_TABLE; i++, frame += PAGE_SIZE)
         table->m_entries[i] = page | (frame & ~0xFFF);
 
