@@ -22,10 +22,10 @@ inline uint16_t inw(uint16_t port)
 }
 
 // Write len copies of val into dest.
-inline void memset_tool(uint8_t *dest, uint8_t val, uint32_t len)
+inline void memset_tool(void *dest, uint8_t val, uint32_t len)
 {
-    uint8_t *temp = (uint8_t *)dest;
-    for (; len != 0; len--) *temp++ = val;
+	uint8_t *temp = (uint8_t *)dest;
+	for (; len != 0; len--) *temp++ = val;
 }
 
 // Convert int to ascii
