@@ -121,4 +121,8 @@ void vmm_map_page(void *phys, void *virt) {
     table = (page_table *)((*entry) & ~0xFFF);
     uint32_t *page = &table->m_entries[PAGE_TABLE_INDEX((virtaddr_t)virt)];
     *page = (physaddr_t)phys | (1 << 0); // Present
+    // TLB invalidation (because I changed the mapping of the virtual address)
+    __asm__ volatile("invlpg (%0)" ::"r" ((virtaddr_t)virt) : "memory");
+    // Note that the MMU adds translations to the TLB automatically, so I don't need to change it
+    // I just need to remove the invalidated translations (with the invlpg command)
 }
