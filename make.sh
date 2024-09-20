@@ -3,7 +3,7 @@
 export PATH=$HOME/opt/cross/bin:$PATH
 cd src
 if ! make; then
-    echo "Build failed!"
+    echo "Build failed"
     exit 1
 fi
 
