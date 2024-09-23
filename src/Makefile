@@ -40,14 +40,14 @@ isr.o: kernel/isr.c
 keyboard.o: kernel/keyboard.c
 	$(CC) $(CFLAGS) -o keyboard.o kernel/keyboard.c
 
-memory.o: kernel/memory.c
-	$(CC) $(CFLAGS) -o memory.o kernel/memory.c
+memory.o: kernel/mm/memory.c
+	$(CC) $(CFLAGS) -o memory.o kernel/mm/memory.c
 
 multiboot_info.o: kernel/multiboot_info.c
 	$(CC) $(CFLAGS) -o multiboot_info.o kernel/multiboot_info.c
 
-paging.o: kernel/paging.asm
-	$(ASM) $(ASMFLAGS) -o paging.o kernel/paging.asm
+paging.o: kernel/mm/paging.asm
+	$(ASM) $(ASMFLAGS) -o paging.o kernel/mm/paging.asm
 
 clean:
 	rm -rf *.o kernel.bin
