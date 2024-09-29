@@ -1,28 +1,10 @@
 #include "pch.h"
+#include "fat.h"
 
-typedef struct
-{
-    uint8_t BootJumpInstruction[3];
-    uint8_t OemIdentifier[8];
-    uint16_t BytesPerSector;
-    uint8_t SectorsPerCluster;
-    uint16_t ReservedSectors;
-    uint8_t FatCount;
-    uint16_t DirEntryCount;
-    uint16_t TotalSectors;
-    uint8_t MediaDescriptorType;
-    uint16_t SectorsPerFat;
-    uint16_t SectorsPerTrack;
-    uint16_t Heads;
-    uint32_t HiddenSectors;
-    uint32_t LargeSectorCount;
+void initialize_bpb(BPB *bpb, uint32_t total_sectors, uint16_t sectors_per_fat, uint8_t sectors_per_cluster) {
+    bpb->jump_instruction[0] = 0xEB; // Jump instruction
+    bpb->jump_instruction[1] = 0x3C; // Offset (60 bytes - the BPB is 62 bytes including the jump instruction that is 2 bytes)
+    bpb->jump_instruction[2] = 0x90; // NOP
+}
 
-    // extended boot record
-    uint8_t DriveNumber;
-    uint8_t _Reserved;
-    uint8_t Signature;
-    uint32_t VolumeId;          // serial number, value doesn't matter
-    uint8_t VolumeLabel[11];    // 11 bytes, padded with spaces
-    uint8_t SystemId[8];
 
-} __attribute__((packed)) BootSector;
