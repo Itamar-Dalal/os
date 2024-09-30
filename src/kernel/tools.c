@@ -24,14 +24,16 @@ inline uint16_t inw(uint16_t port)
 // Write len copies of val into dest
 inline void memset_tool(void *dest, uint8_t val, size_t len)
 {
-	uint8_t *temp = (uint8_t *)dest;
-	for (; len != 0; len--) *temp++ = val;
+	uint8_t *dest_copy = (uint8_t *)dest;
+	for (; len != 0; len--) *dest_copy++ = val;
 }
 
 // Copy the value pointed to by src into dest
-void memcpy_tool(void *dest, void *src, size_t len)
+inline void memcpy_tool(void *dest, const void *src, size_t len)
 {
-
+	uint8_t *dest_copy = (uint8_t *)dest;
+	const uint8_t *src_copy = (const uint8_t *)src;
+	for (; len != 0; len--) *dest_copy++ = *src_copy++;
 }
 
 // Convert int to ascii

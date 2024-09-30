@@ -3,7 +3,6 @@
 
 // FAT16 implementation
 
-
 // FAT16 BIOS Parameter Block (BPB)
 typedef struct
 {
@@ -22,6 +21,7 @@ typedef struct
     uint32_t hidden_sectors;     // Number of hidden sectors before the partition
 } __attribute__((packed)) BPB;
 
-void initialize_bpb(BPB *bpb, uint32_t total_sectors, uint16_t sectors_per_fat, uint8_t sectors_per_cluster);
+void initialize_bpb(BPB *bpb, uint16_t total_sectors, uint16_t sectors_per_fat, uint8_t sectors_per_cluster);
+//int create_boot_sector(const char *filename, BPB *bpb);
 
 #endif
