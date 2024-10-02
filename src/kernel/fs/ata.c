@@ -38,7 +38,7 @@ void ata_read_block(uint32_t lba, void *buffer) {
     }
 }
 
-void ata_write_block(uint32_t lba, uint8_t *buffer) {
+void ata_write_block(uint32_t lba, void *buffer) {
     // Select the master drive
     outb(ATA_DRIVE_SELECT, 0xE0 | ((lba >> 24) & 0x0F));
     // Set the sector count to 1 (write 1 sector)
