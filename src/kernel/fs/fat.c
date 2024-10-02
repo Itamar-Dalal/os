@@ -21,6 +21,7 @@ void initialize_bpb(BPB *bpb, uint16_t total_sectors, uint16_t sectors_per_fat, 
     bpb->hidden_sectors = 0;
 }
 
-//int create_boot_sector(const char *filename, BPB *bpb) {
-//}
+int create_boot_sector(const char *filename, BPB *bpb) {
+
+}
 
