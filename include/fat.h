@@ -22,6 +22,6 @@ typedef struct
 } __attribute__((packed)) BPB;
 
 void initialize_bpb(BPB *bpb, uint16_t total_sectors, uint16_t sectors_per_fat, uint8_t sectors_per_cluster);
-//int create_boot_sector(const char *filename, BPB *bpb);
+int create_boot_sector(BPB *bpb);
 
 #endif

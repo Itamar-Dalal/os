@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "fat.h"
+#include "ata.h"
 
 void initialize_bpb(BPB *bpb, uint16_t total_sectors, uint16_t sectors_per_fat, uint8_t sectors_per_cluster) {
     bpb->jump_instruction[0] = 0xEB; // Jump instruction
@@ -21,7 +22,9 @@ void initialize_bpb(BPB *bpb, uint16_t total_sectors, uint16_t sectors_per_fat, 
     bpb->hidden_sectors = 0;
 }
 
-int create_boot_sector(const char *filename, BPB *bpb) {
-
+int create_boot_sector(BPB *bpb) {
+    uint8_t boot_sector[512];
+    memset_tool(boot_sector, 0, sizeof(boot_sector));
+    memcpy_tool(boot_sector, bpb, sizeof(BPB));
+    ata_write_block(0x0, boot_sector); // Write the boot sector to the first block (LBA 0) of the disk
 }
-
