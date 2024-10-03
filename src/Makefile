@@ -7,8 +7,8 @@ ASMFLAGS := -f elf
 
 all: kernel.bin
 
-kernel.bin: kernel.o boot.o screen.o asmisr.o gdt.o idt.o descriptors.o isr.o tools.o keyboard.o memory.o multiboot_info.o paging.o
-	$(LD) $(LDFLAGS) -o kernel.bin kernel.o boot.o screen.o asmisr.o gdt.o idt.o descriptors.o isr.o tools.o keyboard.o memory.o multiboot_info.o paging.o
+kernel.bin: kernel.o boot.o screen.o asmisr.o gdt.o idt.o descriptors.o isr.o tools.o keyboard.o memory.o multiboot_info.o paging.o fat.o ata.o
+	$(LD) $(LDFLAGS) -o kernel.bin kernel.o boot.o screen.o asmisr.o gdt.o idt.o descriptors.o isr.o tools.o keyboard.o memory.o multiboot_info.o paging.o fat.o ata.o
 
 kernel.o: kernel/kernel.c
 	$(CC) $(CFLAGS) -o kernel.o kernel/kernel.c
@@ -48,6 +48,12 @@ multiboot_info.o: kernel/multiboot_info.c
 
 paging.o: kernel/mm/paging.asm
 	$(ASM) $(ASMFLAGS) -o paging.o kernel/mm/paging.asm
+
+fat.o: kernel/fs/fat.c
+	$(CC) $(CFLAGS) -o fat.o kernel/fs/fat.c
+
+ata.o: kernel/fs/ata.c
+	$(CC) $(CFLAGS) -o ata.o kernel/fs/ata.c
 
 clean:
 	rm -rf *.o kernel.bin
