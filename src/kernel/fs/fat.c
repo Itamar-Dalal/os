@@ -1,6 +1,9 @@
 #include "pch.h"
 #include "fat.h"
 #include "ata.h"
+#include "memory.h"
+
+// FAT16 structure: https://www.hdd-tool.com/pic/fat16.jpg
 
 void initialize_bpb(BPB *bpb, uint16_t total_sectors, uint16_t sectors_per_fat, uint8_t sectors_per_cluster) {
     bpb->jump_instruction[0] = 0xEB; // Jump instruction
@@ -20,11 +23,51 @@ void initialize_bpb(BPB *bpb, uint16_t total_sectors, uint16_t sectors_per_fat, 
     bpb->sectors_per_track = 63;
     bpb->number_of_heads = 255;
     bpb->hidden_sectors = 0;
+
+    // Extended BIOS Parameter Block (EBPB)
+    bpb->drive_number = 0x80; // First hard drive
+    bpb->reserved1 = 0x00;
+    bpb->boot_signature = 0x29;
+    bpb->volume_serial_number = generate_volume_serial();
+    memcpy_tool(bpb->volume_label, "MYDISK     ", 11);
+    memcpy_tool(bpb->fs_type, "FAT16   ", 8);
+    // Boot code (initilize to 0 because GRUB doesn't rely on the FAT16 boot sector's boot code)
+    memset_tool(bpb->boot_code, 0x00, sizeof(bpb->boot_code));
+    bpb->signature = 0xAA55;
 }
 
-int create_boot_sector(BPB *bpb) {
+// This Function will return a new random number for each call (volume serial number should be unique)
+uint32_t generate_volume_serial() {
+    // Linear Congruential Generator (LCG) algorithm
+    static uint32_t seed = 12345;
+    seed = (seed * 1103515245) + 12345;
+    return seed;
+}
+
+void create_boot_sector(BPB *bpb) {
     uint8_t boot_sector[512];
     memset_tool(boot_sector, 0, sizeof(boot_sector));
     memcpy_tool(boot_sector, bpb, sizeof(BPB));
     ata_write_block(0x0, boot_sector); // Write the boot sector to the first block (LBA 0) of the disk
+}
+
+void initialize_fat_tables(BPB *bpb) {
+    uint32_t fat_size = bpb->fat_size_16 * bpb->bytes_per_sector;
+    uint8_t *fat = (uint8_t *)kmalloc(fat_size);
+    if (fat == NULL) {
+        screen_print("Error in initialize_fat_tables: failed to allocate memory for fat.", 0);
+        return;
+    }
+    memset_tool(fat, 0, fat_size);
+    // In FAT16, the first two entries are reserved
+    fat[0] = bpb->media_type;
+    fat[1] = 0xFF;
+    fat[2] = 0xFF;
+    fat[3] = 0xFF;
+
+    uint32_t fat_lba;
+    for (int i = 0; i < bpb->fat_count; i++) {
+        fat_lba = bpb->reserved_sectors + (bpb->fat_size_16 * i);
+        ata_write_block(fat_lba, fat);
+    }
 }

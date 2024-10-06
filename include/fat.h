@@ -19,9 +19,23 @@ typedef struct
     uint16_t sectors_per_track;  // Sectors per track for BIOS (usually used for older media types like floppy disks)
     uint16_t number_of_heads;    // Number of heads for BIOS
     uint32_t hidden_sectors;     // Number of hidden sectors before the partition
+
+    // Extended BIOS Parameter Block (EBPB)
+    uint8_t drive_number;           // BIOS drive number
+    uint8_t reserved1;              // Reserved for padding (usually 0)
+    uint8_t boot_signature;         // Extended boot signature (0x29)
+    uint32_t volume_serial_number;  // Volume serial number
+    uint8_t volume_label[11];       // Volume label
+    uint8_t fs_type[8];             // File system type (FAT16)
+
+    // Boot code (remaining bytes up to 510)
+    uint8_t boot_code[448];         // Boot code placeholder
+
+    uint16_t signature;             // Boot sector signature (0x55AA)
 } __attribute__((packed)) BPB;
 
 void initialize_bpb(BPB *bpb, uint16_t total_sectors, uint16_t sectors_per_fat, uint8_t sectors_per_cluster);
-int create_boot_sector(BPB *bpb);
+void create_boot_sector(BPB *bpb);
+void initialize_fat_tables(BPB *bpb);
 
 #endif
