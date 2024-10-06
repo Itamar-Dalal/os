@@ -71,3 +71,36 @@ void initialize_fat_tables(BPB *bpb) {
         ata_write_block(fat_lba, fat);
     }
 }
+
+void initialize_root_directory(BPB *bpb) {
+
+}
+
+uint16_t read_cluster(BPB *bpb, uint16_t cluster_index) {
+
+}
+
+void write_cluster(BPB *bpb, uint16_t cluster_number, uint16_t value) {
+
+}
+
+uint16_t find_free_cluster(BPB *bpb) {
+    for (uint16_t cluster_index = 2; cluster_index < 0xFFF8; cluster_index++) {
+        if (read_cluster(bpb, cluster_index) == 0x0000) { // Free cluster is marked as 0
+            return cluster_index;
+        }
+    }
+    return 0; // No free cluster found
+}
+
+void create_file(BPB *bpb, const char *filename) {
+
+}
+
+void read_file(BPB *bpb, const char *filename, uint8_t *buffer, uint32_t buffer_size) {
+
+}
+
+void delete_file(BPB *bpb, const char *filename) {
+
+}
