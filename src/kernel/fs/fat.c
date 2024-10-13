@@ -85,10 +85,12 @@ void initialize_fat_tables(BPB *bpb) {
     fat[3] = 0xFF;
 
     uint32_t fat_lba;
-    for (int i = 0; i < bpb->fat_count; i++) {
+    for (size_t i = 0; i < bpb->fat_count; i++) {
         fat_lba = bpb->reserved_sectors + (bpb->fat_size_16 * i);
-        ata_write_block(fat_lba, fat);
+        for (size_t j = 0; j < bpb->fat_size_16; j++)
+            ata_write_block(fat_lba + j, fat + (bpb->bytes_per_sector * j));
     }
+    //kfree(fat);
 }
 
 void initialize_root_directory(BPB *bpb) {
