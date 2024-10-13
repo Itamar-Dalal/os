@@ -19,6 +19,9 @@
 
 #define ROOT_DIR_ENTRY_SIZE 32
 
+#define FAT16_EOF 0xFFF8
+#define FAT16_FREE 0x0000
+
 // FAT16 structure: https://www.hdd-tool.com/pic/fat16.jpg
 
 void initialize_bpb(BPB *bpb, uint16_t total_sectors, uint16_t sectors_per_fat, uint8_t sectors_per_cluster) {
@@ -99,13 +102,21 @@ void initialize_root_directory(BPB *bpb) {
         return;
     }
     memset_tool(root_directory, 0, bpb->root_entry_count * ROOT_DIR_ENTRY_SIZE);
-
-
 }
 
-uint16_t read_cluster(BPB *bpb, uint16_t cluster_index) {
+uint16_t read_cluster(BPB *bpb, const uint16_t cluster_number) {
+    uint32_t fat_start_address = bpb->reserved_sectors * bpb->bytes_per_sector;
+    uint32_t fat_offset = cluster_number * 2; // Each FAT16 entry is 2 bytes
+    uint32_t fat_sector = fat_start_address + (fat_offset / bpb->bytes_per_sector); // Determine which sector to read
+    
+    uint16_t fat_sector_data[BYTES_PER_SECTOR / 2];
+    ata_read_block(fat_sector, fat_sector_data);
+    uint32_t entry_offset = (fat_offset % bpb->bytes_per_sector) / 2;
+    uint16_t next_cluster = fat_sector_data[entry_offset];
 
+    return next_cluster;
 }
+
 
 void write_cluster(BPB *bpb, uint16_t cluster_number, uint16_t value) {
 
@@ -113,7 +124,7 @@ void write_cluster(BPB *bpb, uint16_t cluster_number, uint16_t value) {
 
 uint16_t find_free_cluster(BPB *bpb) {
     for (uint16_t cluster_index = 2; cluster_index < 0xFFF8; cluster_index++) {
-        if (read_cluster(bpb, cluster_index) == 0x0000) { // Free cluster is marked as 0
+        if (read_cluster(bpb, cluster_index) == FAT16_FREE) { // Free cluster is marked as 0
             return cluster_index;
         }
     }
