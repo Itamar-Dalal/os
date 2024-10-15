@@ -17,7 +17,7 @@
 #define FILE_SYSTEM_TYPE "FAT16   "
 #define BOOT_SECTOR_SIGNATURE 0xAA55
 
-#define ROOT_DIR_ENTRY_SIZE 32
+#define ROOT_DIR_ENTRY_SIZE 32 // Each entry in the root directory is 32 bytes
 
 #define FAT16_EOF 0xFFF8
 #define FAT16_FREE 0x0000
@@ -63,19 +63,25 @@ uint32_t generate_volume_serial() {
     return seed;
 }
 
-void create_boot_sector(BPB *bpb) {
+int32_t create_boot_sector(BPB *bpb) {
     uint8_t boot_sector[BYTES_PER_SECTOR];
     memset_tool(boot_sector, 0, sizeof(boot_sector));
     memcpy_tool(boot_sector, bpb, sizeof(BPB));
-    ata_write_block(0x0, boot_sector); // Write the boot sector to the first block (LBA 0) of the disk
+    // Write the boot sector to the first block (LBA 0) of the disk
+    int32_t return_code = ata_write_block(0x0, boot_sector);
+    if (return_code != 0) {
+        screen_print("Error in create_boot_sector: failed to write boot sector to disk", 0);
+        return -1;
+    }
+    return 0;
 }
 
-void initialize_fat_tables(BPB *bpb) {
+int32_t initialize_fat_tables(BPB *bpb) {
     uint32_t fat_size = bpb->fat_size_16 * bpb->bytes_per_sector;
     uint8_t *fat = (uint8_t *)kmalloc(fat_size);
     if (fat == NULL) {
-        screen_print("Error in initialize_fat_tables: failed to allocate memory for fat.", 0);
-        return;
+        screen_print("Error in initialize_fat_tables: failed to allocate memory for FAT", 0);
+        return -1;
     }
     memset_tool(fat, 0, fat_size);
     // In FAT16, the first two entries are reserved
@@ -87,41 +93,77 @@ void initialize_fat_tables(BPB *bpb) {
     uint32_t fat_lba;
     for (size_t i = 0; i < bpb->fat_count; i++) {
         fat_lba = bpb->reserved_sectors + (bpb->fat_size_16 * i);
-        for (size_t j = 0; j < bpb->fat_size_16; j++)
-            ata_write_block(fat_lba + j, fat + (bpb->bytes_per_sector * j));
+        for (size_t j = 0; j < bpb->fat_size_16; j++) {
+            int32_t return_code = ata_write_block(fat_lba + j, (fat + (bpb->bytes_per_sector * j)));
+            if (return_code != 0) {
+                screen_print("Error in initialize_fat_tables: failed to write FAT to disk", 0);
+                //kfree(fat);
+                return -1;
+            }
+        }
     }
     //kfree(fat);
+    return 0;
 }
 
-void initialize_root_directory(BPB *bpb) {
+int32_t initialize_root_directory(BPB *bpb) {
     uint32_t root_dir_lba = bpb->reserved_sectors + (bpb->fat_size_16 * bpb->fat_count);
-    uint32_t root_dir_start_address = root_dir_lba * bpb->bytes_per_sector;
 
     // Root Directory structure: http://osr600doc.sco.com/en/FS_admin/_The_Root_Directory.html
-    uint8_t *root_directory = (uint8_t *)kmalloc(bpb->root_entry_count * ROOT_DIR_ENTRY_SIZE); // Each entry is 32 bytes
+    uint32_t root_dir_size = bpb->root_entry_count * ROOT_DIR_ENTRY_SIZE;
+    uint8_t *root_directory = (uint8_t *)kmalloc(root_dir_size);
     if (root_directory == NULL) {
-        screen_print("Error in initialize_root_directory: failed to allocate memory for root directory.", 0);
-        return;
+        screen_print("Error in initialize_root_directory: failed to allocate memory for root directory", 0);
+        return -1;
     }
-    memset_tool(root_directory, 0, bpb->root_entry_count * ROOT_DIR_ENTRY_SIZE);
+    memset_tool(root_directory, 0, root_dir_size);
+    int32_t return_code = ata_write_block(root_dir_lba, root_directory);
+    if (return_code != 0) {
+        screen_print("Error in initialize_root_directory: failed to write root directory to disk", 0);
+        //kfree(root_directory);
+        return -1;
+    }
+    //kfree(root_directory);
+    return 0;
 }
 
 uint16_t read_cluster(BPB *bpb, const uint16_t cluster_number) {
     uint32_t fat_start_address = bpb->reserved_sectors * bpb->bytes_per_sector;
     uint32_t fat_offset = cluster_number * 2; // Each FAT16 entry is 2 bytes
     uint32_t fat_sector = fat_start_address + (fat_offset / bpb->bytes_per_sector); // Determine which sector to read
-    
-    uint16_t fat_sector_data[BYTES_PER_SECTOR / 2];
-    ata_read_block(fat_sector, fat_sector_data);
+
+    uint16_t fat_sector_data[bpb->bytes_per_sector / 2];
+    int32_t return_code = ata_read_block(fat_sector, fat_sector_data);
+    if (return_code != 0) {
+        screen_print("Error in read_cluster: failed to read FAT sector for the cluster", 0);
+        return 0xFFFF; // Invalid value
+    }
+
     uint32_t entry_offset = (fat_offset % bpb->bytes_per_sector) / 2;
     uint16_t next_cluster = fat_sector_data[entry_offset];
-
     return next_cluster;
 }
 
+int32_t write_cluster(BPB *bpb, const uint16_t cluster_number, const uint16_t value) {
+    uint32_t fat_start_address = bpb->reserved_sectors * bpb->bytes_per_sector;
+    uint32_t fat_offset = cluster_number * 2; // Each FAT16 entry is 2 bytes
+    uint32_t fat_sector = fat_start_address + (fat_offset / bpb->bytes_per_sector); // Determine which sector to read
+    
+    // Read the FAT sector, modify the target cluster entry, and rewrite the FAT sector to disk
+    uint16_t fat_sector_data[bpb->bytes_per_sector / 2];
+    int32_t return_code = ata_read_block(fat_sector, fat_sector_data);
+    if (return_code != 0) {
+        screen_print("Error in write_cluster: failed to read FAT sector for the cluster", 0);
+        return -1;
+    }
 
-void write_cluster(BPB *bpb, uint16_t cluster_number, uint16_t value) {
-
+    fat_sector_data[(fat_offset % bpb->bytes_per_sector) / 2] = value;
+    return_code = ata_write_block(fat_sector, fat_sector_data);
+    if (return_code != 0) {
+        screen_print("Error in write_cluster: failed to write FAT entry for the cluster", 0);
+        return -1;
+    }
+    return 0;
 }
 
 uint16_t find_free_cluster(BPB *bpb) {

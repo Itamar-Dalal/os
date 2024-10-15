@@ -12,11 +12,32 @@
 #define ATA_DRIVE_SELECT  0x1F6  // Drive select
 #define ATA_COMMAND       0x1F7  // Command port
 #define ATA_STATUS        0x1F7  // Status port
+#define ATA_ERROR         0x1F1  // Error register
 
 #define ATA_CMD_READ  0x20       // Read command
 #define ATA_CMD_WRITE 0x30       // Write command
 
-void ata_read_block(uint32_t lba, void *buffer) {
+#define ATA_STATUS_ERR  0x01     // Error bit
+#define ATA_STATUS_DRQ  0x08     // Data request bit
+#define ATA_STATUS_BSY  0x80     // Busy bit
+
+// Error messages for debug
+#define ATA_ERR_ABORTED_CMD  0x01  // Aborted Command
+#define ATA_ERR_MEDIA_ERR    0x10  // Media error
+
+#define BYTES_PER_BLOCK 512
+
+void print_ata_error() {
+    uint8_t error = inb(ATA_ERROR);
+    if (error & ATA_ERR_ABORTED_CMD) // The drive couldn't process the command 
+        screen_print("ATA Error: Command Aborted\n", 0);
+    else if (error & ATA_ERR_MEDIA_ERR) // Corrupted disk data
+        screen_print("ATA Error: Media Error\n", 0);
+    else
+        screen_print("ATA Error: Unknown Error\n", 0);
+}
+
+int32_t ata_read_block(uint32_t lba, void *buffer) {
     // Select the master drive (0xE0 for master, 0xF0 for slave)
     outb(ATA_DRIVE_SELECT, 0xE0 | ((lba >> 24) & 0x0F));
     // Set the sector count to 1 (read 1 sector)
@@ -29,16 +50,22 @@ void ata_read_block(uint32_t lba, void *buffer) {
     outb(ATA_COMMAND, ATA_CMD_READ);
 
     // Wait for the drive to be ready (check BSY and DRQ bits in status register)
-    while (inb(ATA_STATUS) & 0x80);  // Wait while BSY (busy) bit is set
-    while (!(inb(ATA_STATUS) & 0x08));  // Wait for DRQ (data request) bit to be set
+    while (inb(ATA_STATUS) & ATA_STATUS_BSY);  // Wait while BSY (busy) bit is set
+    if (inb(ATA_STATUS) & ATA_STATUS_ERR) {
+        print_ata_error();
+        return -1;
+    }
+    while (!(inb(ATA_STATUS) & ATA_STATUS_DRQ));  // Wait for DRQ (data request) bit to be set
+
     // Read the sector data (512 bytes)
-    for (int i = 0; i < 256; i++) {
+    for (size_t i = 0; i < BYTES_PER_BLOCK / 2; i++) {
         uint16_t data = inw(ATA_DATA);
         ((uint16_t *)buffer)[i] = data;
     }
+    return 0;
 }
 
-void ata_write_block(uint32_t lba, void *buffer) {
+int32_t ata_write_block(uint32_t lba, void *buffer) {
     // Select the master drive
     outb(ATA_DRIVE_SELECT, 0xE0 | ((lba >> 24) & 0x0F));
     // Set the sector count to 1 (write 1 sector)
@@ -51,10 +78,15 @@ void ata_write_block(uint32_t lba, void *buffer) {
     outb(ATA_COMMAND, ATA_CMD_WRITE);
 
     // Wait for the drive to be ready (check BSY and DRQ bits in status register)
-    while (inb(ATA_STATUS) & 0x80);  // Wait while BSY (busy) bit is set
-    while (!(inb(ATA_STATUS) & 0x08));  // Wait for DRQ (data request) bit to be set
-    // Write the sector data (512 bytes)
-    for (int i = 0; i < 256; i++) {
-        outw(ATA_DATA, ((uint16_t *)buffer)[i]);
+    while (inb(ATA_STATUS) & ATA_STATUS_BSY);  // Wait while BSY (busy) bit is set
+    if (inb(ATA_STATUS) & ATA_STATUS_ERR) {
+        print_ata_error();
+        return -1;
     }
+    while (!(inb(ATA_STATUS) & ATA_STATUS_DRQ));  // Wait for DRQ (data request) bit to be set
+
+    // Write the sector data (512 bytes)
+    for (size_t i = 0; i < BYTES_PER_BLOCK / 2; i++)
+        outw(ATA_DATA, ((uint16_t *)buffer)[i]);
+    return 0;
 }
