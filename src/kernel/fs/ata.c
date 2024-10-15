@@ -25,8 +25,6 @@
 #define ATA_ERR_ABORTED_CMD  0x01  // Aborted Command
 #define ATA_ERR_MEDIA_ERR    0x10  // Media error
 
-#define BYTES_PER_BLOCK 512
-
 void print_ata_error() {
     uint8_t error = inb(ATA_ERROR);
     if (error & ATA_ERR_ABORTED_CMD) // The drive couldn't process the command 
@@ -58,7 +56,7 @@ int32_t ata_read_block(uint32_t lba, void *buffer) {
     while (!(inb(ATA_STATUS) & ATA_STATUS_DRQ));  // Wait for DRQ (data request) bit to be set
 
     // Read the sector data (512 bytes)
-    for (size_t i = 0; i < BYTES_PER_BLOCK / 2; i++) {
+    for (size_t i = 0; i < BYTES_PER_SECTOR / 2; i++) {
         uint16_t data = inw(ATA_DATA);
         ((uint16_t *)buffer)[i] = data;
     }
@@ -86,7 +84,7 @@ int32_t ata_write_block(uint32_t lba, void *buffer) {
     while (!(inb(ATA_STATUS) & ATA_STATUS_DRQ));  // Wait for DRQ (data request) bit to be set
 
     // Write the sector data (512 bytes)
-    for (size_t i = 0; i < BYTES_PER_BLOCK / 2; i++)
+    for (size_t i = 0; i < BYTES_PER_SECTOR / 2; i++)
         outw(ATA_DATA, ((uint16_t *)buffer)[i]);
     return 0;
 }

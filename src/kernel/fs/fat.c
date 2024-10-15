@@ -3,7 +3,8 @@
 #include "ata.h"
 #include "memory.h"
 
-#define BYTES_PER_SECTOR 512
+// FAT16 implementation
+
 #define RESERVED_SECTORS 1
 #define NUM_OF_FAT 2
 #define NUM_OF_ROOT_ENTRIES 224
