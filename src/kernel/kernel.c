@@ -3,6 +3,8 @@
 #include "multiboot_info.h"
 #include "memory.h"
 
+#define MULTIBOOT_MAGIC 0x2BADB002
+
 void test_pmm() {
     void *block1 = pmm_alloc_block();
     if (block1 != NULL) {
@@ -59,9 +61,9 @@ void test_vmm() {
 
 int kmain(void *mbd, uint32_t magic) {
     screen_clear();
-    if (magic != 0x2BADB002) {
+    if (magic != MULTIBOOT_MAGIC) {
         screen_print("Invalid multiboot header.\n", 0);
-        return -1;
+        return EXIT_FAILURE;
     }
     multiboot_info_t *mb_info = (multiboot_info_t *)mbd;
     uint32_t mem_lower = mb_info->mem_lower; // In kilobytes
@@ -84,5 +86,5 @@ int kmain(void *mbd, uint32_t magic) {
     //__asm__("int $0x23");
     
     while (true) {;}
-    return 0;
+    return EXIT_SUCCESS;
 }

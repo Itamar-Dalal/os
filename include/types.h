@@ -22,6 +22,9 @@ typedef uint8_t bool;
 
 #define NULL ((void *)0)
 
+#define EXIT_FAILURE -1
+#define EXIT_SUCCESS 0
+
 typedef struct {
 	uint16_t limit_low;
 	uint16_t base_low;

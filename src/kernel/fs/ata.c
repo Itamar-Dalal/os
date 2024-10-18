@@ -51,7 +51,7 @@ int32_t ata_read_block(uint32_t lba, void *buffer) {
     while (inb(ATA_STATUS) & ATA_STATUS_BSY);  // Wait while BSY (busy) bit is set
     if (inb(ATA_STATUS) & ATA_STATUS_ERR) {
         print_ata_error();
-        return -1;
+        return EXIT_FAILURE;
     }
     while (!(inb(ATA_STATUS) & ATA_STATUS_DRQ));  // Wait for DRQ (data request) bit to be set
 
@@ -60,7 +60,7 @@ int32_t ata_read_block(uint32_t lba, void *buffer) {
         uint16_t data = inw(ATA_DATA);
         ((uint16_t *)buffer)[i] = data;
     }
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int32_t ata_write_block(uint32_t lba, void *buffer) {
@@ -79,12 +79,12 @@ int32_t ata_write_block(uint32_t lba, void *buffer) {
     while (inb(ATA_STATUS) & ATA_STATUS_BSY);  // Wait while BSY (busy) bit is set
     if (inb(ATA_STATUS) & ATA_STATUS_ERR) {
         print_ata_error();
-        return -1;
+        return EXIT_FAILURE;
     }
     while (!(inb(ATA_STATUS) & ATA_STATUS_DRQ));  // Wait for DRQ (data request) bit to be set
 
     // Write the sector data (512 bytes)
     for (size_t i = 0; i < BYTES_PER_SECTOR / 2; i++)
         outw(ATA_DATA, ((uint16_t *)buffer)[i]);
-    return 0;
+    return EXIT_SUCCESS;
 }

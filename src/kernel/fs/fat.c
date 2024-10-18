@@ -70,11 +70,11 @@ int32_t create_boot_sector(BPB *bpb) {
     memcpy_tool(boot_sector, bpb, sizeof(BPB));
     // Write the boot sector to the first block (LBA 0) of the disk
     int32_t return_code = ata_write_block(0x0, boot_sector);
-    if (return_code != 0) {
+    if (return_code != EXIT_SUCCESS) {
         screen_print("Error in create_boot_sector: failed to write boot sector to disk", 0);
-        return -1;
+        return EXIT_FAILURE;
     }
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int32_t initialize_fat_tables(BPB *bpb) {
@@ -82,7 +82,7 @@ int32_t initialize_fat_tables(BPB *bpb) {
     uint8_t *fat = (uint8_t *)kmalloc(fat_size);
     if (fat == NULL) {
         screen_print("Error in initialize_fat_tables: failed to allocate memory for FAT", 0);
-        return -1;
+        return EXIT_FAILURE;
     }
     memset_tool(fat, 0, fat_size);
     // In FAT16, the first two entries are reserved
@@ -96,15 +96,15 @@ int32_t initialize_fat_tables(BPB *bpb) {
         fat_lba = bpb->reserved_sectors + (bpb->fat_size_16 * i);
         for (size_t j = 0; j < bpb->fat_size_16; j++) {
             int32_t return_code = ata_write_block(fat_lba + j, (fat + (bpb->bytes_per_sector * j)));
-            if (return_code != 0) {
+            if (return_code != EXIT_SUCCESS) {
                 screen_print("Error in initialize_fat_tables: failed to write FAT to disk", 0);
                 //kfree(fat);
-                return -1;
+                return EXIT_FAILURE;
             }
         }
     }
     //kfree(fat);
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int32_t initialize_root_directory(BPB *bpb) {
@@ -115,17 +115,17 @@ int32_t initialize_root_directory(BPB *bpb) {
     uint8_t *root_directory = (uint8_t *)kmalloc(root_dir_size);
     if (root_directory == NULL) {
         screen_print("Error in initialize_root_directory: failed to allocate memory for root directory", 0);
-        return -1;
+        return EXIT_FAILURE;
     }
     memset_tool(root_directory, 0, root_dir_size);
     int32_t return_code = ata_write_block(root_dir_lba, root_directory);
-    if (return_code != 0) {
+    if (return_code != EXIT_SUCCESS) {
         screen_print("Error in initialize_root_directory: failed to write root directory to disk", 0);
         //kfree(root_directory);
-        return -1;
+        return EXIT_FAILURE;
     }
     //kfree(root_directory);
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 uint16_t read_cluster(BPB *bpb, const uint16_t cluster_number) {
@@ -135,7 +135,7 @@ uint16_t read_cluster(BPB *bpb, const uint16_t cluster_number) {
 
     uint16_t fat_sector_data[bpb->bytes_per_sector / 2];
     int32_t return_code = ata_read_block(fat_sector, fat_sector_data);
-    if (return_code != 0) {
+    if (return_code != EXIT_SUCCESS) {
         screen_print("Error in read_cluster: failed to read FAT sector for the cluster", 0);
         return 0xFFFF; // Invalid value
     }
@@ -153,18 +153,18 @@ int32_t write_cluster(BPB *bpb, const uint16_t cluster_number, const uint16_t va
     // Read the FAT sector, modify the target cluster entry, and rewrite the FAT sector to disk
     uint16_t fat_sector_data[bpb->bytes_per_sector / 2];
     int32_t return_code = ata_read_block(fat_sector, fat_sector_data);
-    if (return_code != 0) {
+    if (return_code != EXIT_SUCCESS) {
         screen_print("Error in write_cluster: failed to read FAT sector for the cluster", 0);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     fat_sector_data[(fat_offset % bpb->bytes_per_sector) / 2] = value;
     return_code = ata_write_block(fat_sector, fat_sector_data);
-    if (return_code != 0) {
+    if (return_code != EXIT_SUCCESS) {
         screen_print("Error in write_cluster: failed to write FAT entry for the cluster", 0);
-        return -1;
+        return EXIT_FAILURE;
     }
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 uint16_t find_free_cluster(BPB *bpb) {
