@@ -7,6 +7,7 @@ static virtaddr_t placement_address = (virtaddr_t)&end;
 
 typedef struct memory_block {
     struct memory_block *next;
+    struct memory_block *prev;
     bool is_free;
     size_t size;
 } memory_block_t;
@@ -43,6 +44,9 @@ void *kmalloc(size_t size) {
             new_block->size = best_fit->size - size;
             new_block->is_free = true;
             new_block->next = best_fit->next;
+            new_block->prev = best_fit;
+            if (new_block->next != NULL)
+                new_block->next->prev = new_block;
             best_fit->next = new_block;
             best_fit->size = size;
         }
@@ -55,7 +59,10 @@ void *kmalloc(size_t size) {
     best_fit->size = size;
     best_fit->is_free = false;
     best_fit->next = free_list;
+    best_fit->prev = NULL;
 
+    if (free_list != NULL)
+        free_list->prev = best_fit;
     free_list = best_fit;
     placement_address += size;
     return (void *)((char *)best_fit + METADATA_SIZE);
@@ -68,14 +75,27 @@ void kfree(void *ptr) {
     memory_block_t *block = (memory_block_t *)((char *)ptr - METADATA_SIZE);
     block->is_free = true;
 
-    // Mearge close free blocks
+    // Mearge close free blocks in both directions
     memory_block_t *curr = block->next;
     while (curr != NULL && curr->is_free) {
         block->next = curr->next;
+        if (curr->next != NULL)
+            curr->next->prev = block;
         block->size += curr->size;
-        curr = block->next;
-        
+        curr = block->next;  
     }
+    curr = block->prev;
+    while (curr != NULL && curr->is_free) {
+        block->prev = curr->prev;
+        if (curr->prev != NULL)
+            curr->prev->next = block;
+        block->size += curr->size;
+        curr = curr->prev;
+    }
+
+    // If the merged block is now the head of the free list, update free_list
+    if (block->prev == NULL)
+        free_list = block;
 }
 
 // PMM implementation
