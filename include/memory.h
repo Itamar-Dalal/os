@@ -31,6 +31,6 @@ typedef struct {
 void vmm_init();
 void vmm_map_page(void *phys, void *virt);
 void *kmalloc(size_t size);
-void *kmalloc_ap(size_t size, physaddr_t *phys_addr);
+void kfree(void *ptr);
 
 #endif // MEMORY_H

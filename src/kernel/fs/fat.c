@@ -25,6 +25,14 @@
 
 // FAT16 structure: https://www.hdd-tool.com/pic/fat16.jpg
 
+// This Function will return a new random number for each call (volume serial number should be unique)
+uint32_t generate_volume_serial() {
+    // Linear Congruential Generator (LCG) algorithm
+    static uint32_t seed = 12345;
+    seed = (seed * 1103515245) + 12345;
+    return seed;
+}
+
 void initialize_bpb(BPB *bpb, uint16_t total_sectors, uint16_t sectors_per_fat, uint8_t sectors_per_cluster) {
     bpb->jump_instruction[0] = 0xEB; // Jump instruction
     bpb->jump_instruction[1] = 0x3C; // Offset (60 bytes - the BPB is 62 bytes including the jump instruction that is 2 bytes)
@@ -54,14 +62,6 @@ void initialize_bpb(BPB *bpb, uint16_t total_sectors, uint16_t sectors_per_fat, 
     // Boot code (initilize to 0 because GRUB doesn't rely on the FAT16 boot sector's boot code)
     memset_tool(bpb->boot_code, 0x00, sizeof(bpb->boot_code));
     bpb->signature = BOOT_SECTOR_SIGNATURE;
-}
-
-// This Function will return a new random number for each call (volume serial number should be unique)
-uint32_t generate_volume_serial() {
-    // Linear Congruential Generator (LCG) algorithm
-    static uint32_t seed = 12345;
-    seed = (seed * 1103515245) + 12345;
-    return seed;
 }
 
 int32_t create_boot_sector(BPB *bpb) {
@@ -103,7 +103,7 @@ int32_t initialize_fat_tables(BPB *bpb) {
             }
         }
     }
-    //kfree(fat);
+    kfree(fat);
     return EXIT_SUCCESS;
 }
 
@@ -124,7 +124,7 @@ int32_t initialize_root_directory(BPB *bpb) {
         //kfree(root_directory);
         return EXIT_FAILURE;
     }
-    //kfree(root_directory);
+    kfree(root_directory);
     return EXIT_SUCCESS;
 }
 

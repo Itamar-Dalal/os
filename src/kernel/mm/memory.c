@@ -3,36 +3,83 @@
 #include "multiboot_info.h"
 
 extern virtaddr_t end; // Defined by the linker
-virtaddr_t placement_address = (virtaddr_t)&end;
+static virtaddr_t placement_address = (virtaddr_t)&end;
+
+typedef struct memory_block {
+    struct memory_block *next;
+    bool is_free;
+    size_t size;
+} memory_block_t;
+
+#define METADATA_SIZE sizeof(memory_block_t)
+
+static memory_block_t *free_list = NULL;
 
 void *kmalloc(size_t size) {
+    if (!size)
+        return NULL;
     // Align the size to the nearest multiple of 4
-    if (size % 4 != 0) {
+    if (size % 4 != 0)
         size = (size + 3) & ~0x3;
+
+    // Add space for metadata (memory_block_t struct)
+    size += METADATA_SIZE;
+    // Search for the best fit
+    memory_block_t *best_fit = NULL;
+    memory_block_t *cur = free_list;
+    while (cur) {
+        if (cur->is_free && cur->size >= size) {
+            if (best_fit == NULL || cur->size < best_fit->size) {
+                best_fit = cur;
+            }
+        }
+        cur = cur->next;
     }
-    // Save the current placement address
-    virtaddr_t addr = placement_address;
+
+    if (best_fit) {
+        // If best fit block is larger than needed, split it
+        if (best_fit->size > size) {
+            memory_block_t *new_block = (memory_block_t *)((char *)best_fit + size);
+            new_block->size = best_fit->size - size;
+            new_block->is_free = true;
+            new_block->next = best_fit->next;
+            best_fit->next = new_block;
+            best_fit->size = size;
+        }
+        best_fit->is_free = false;
+        return (void *)((char *)best_fit + METADATA_SIZE);
+    }
+
+    // No suitable block found, allocate at the end of the placement address
+    best_fit = (memory_block_t *)placement_address;
+    best_fit->size = size;
+    best_fit->is_free = false;
+    best_fit->next = free_list;
+
+    free_list = best_fit;
     placement_address += size;
-    // Return the old placement address
-    return (void *)addr;
+    return (void *)((char *)best_fit + METADATA_SIZE);
 }
 
-// Allocates memory that is aligned to a page boundary 
-// and provides the physical address of the allocated memory
-void *kmalloc_ap(size_t size, physaddr_t *phys_addr) {
-    if (placement_address & (PAGE_SIZE - 1)) {
-        placement_address &= ~(PAGE_SIZE - 1);
-        placement_address += PAGE_SIZE;
+void kfree(void *ptr) {
+    if (ptr == NULL)
+        return;
+
+    memory_block_t *block = (memory_block_t *)((char *)ptr - METADATA_SIZE);
+    block->is_free = true;
+
+    // Mearge close free blocks
+    memory_block_t *curr = block->next;
+    while (curr != NULL && curr->is_free) {
+        block->next = curr->next;
+        block->size += curr->size;
+        curr = block->next;
+        
     }
-    virtaddr_t addr = placement_address;
-    if (phys_addr)
-        *phys_addr = addr; // 1:1 mapping (identity mapping)
-    placement_address += size;
-    return (void *)addr;
 }
 
 // PMM implementation
-uint8_t *memory_map; // Bitmap data structure, each bit represents a block of memory
+static uint8_t *memory_map; // Bitmap data structure, each bit represents a block of memory
 
 void pmm_init() {
     memory_map = (uint8_t *)kmalloc(MEMORY_MAP_SIZE);
