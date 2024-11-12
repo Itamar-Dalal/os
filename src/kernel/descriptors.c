@@ -11,6 +11,9 @@
 #define ICW1_INIT    0x11
 #define ICW4_8086    0x01
 
+#define NUM_OF_SEGMENTS 5
+#define NUM_OF_INTERRUPTS 256
+
 extern void gdt_write(uint32_t);
 extern void idt_write(uint32_t);
 
@@ -271,8 +274,8 @@ extern void isr253();
 extern void isr254();
 extern void isr255();
 
-gdt_entry_t gdt_entries[5];
-idt_entry_t idt_entries[256];
+gdt_entry_t gdt_entries[NUM_OF_SEGMENTS];
+idt_entry_t idt_entries[NUM_OF_INTERRUPTS];
 
 gdt_entry_t gdt_set_gate(uint32_t base, uint32_t limit, uint8_t access, uint8_t granularity)
 {
