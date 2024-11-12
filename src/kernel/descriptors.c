@@ -291,7 +291,7 @@ void gdt_setup()
 {
 	gdt_ptr_t gdt_ptr;
 	gdt_ptr.limit = (sizeof(gdt_entry_t) * 5) - 1; // -1 because it starts from 0
-	gdt_ptr.base = (uint32_t)&gdt_entries;
+	gdt_ptr.base = (physaddr_t)&gdt_entries;
 	/*
 	Present bit (P): 1
 	DPL (Descriptor Privilege Level): 00 (for ring 0, kernel privilege) and 11 (for ring 3, user privilege)
@@ -304,7 +304,7 @@ void gdt_setup()
 	gdt_entries[2] = gdt_set_gate(0, 0xFFFFFFFF, 0x92, 0xCF); // Data segment with kernel privilege
 	gdt_entries[3] = gdt_set_gate(0, 0xFFFFFFFF, 0xFA, 0xCF); // Code segment with user privilege
 	gdt_entries[4] = gdt_set_gate(0, 0xFFFFFFFF, 0xF2, 0xCF); // Data segment with user privilege
-	gdt_write((uint32_t)&gdt_ptr);
+	gdt_write((physaddr_t)&gdt_ptr);
 }
 
 /*void watch() {

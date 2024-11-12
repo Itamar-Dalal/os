@@ -17,8 +17,9 @@ align 4 ; Multiboot standard
 STACKSIZE equ 0x4000
 
 loader:
+    mov esp, stack + STACKSIZE ; Set esp to point to the end of the stack
+
     ; cdecl implementation
-    mov  esp, stack + STACKSIZE
     push eax
     push ebx
     
