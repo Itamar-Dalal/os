@@ -55,5 +55,8 @@ fat.o: kernel/fs/fat.c
 ata.o: kernel/fs/ata.c
 	$(CC) $(CFLAGS) -o ata.o kernel/fs/ata.c
 
+pch.h.gch: ../include/pch.h
+	$(CC) -x c -o pch.h.gch ../include/pch.h
+
 clean:
 	rm -rf *.o kernel.bin
