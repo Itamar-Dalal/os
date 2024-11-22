@@ -19,6 +19,7 @@
 #define BOOT_SECTOR_SIGNATURE 0xAA55
 
 #define ROOT_DIR_ENTRY_SIZE 32 // Each entry in the root directory is 32 bytes
+#define FILE_NAME_LENGTH 11
 
 #define FAT16_EOF 0xFFF8
 #define FAT16_FREE 0x0000
@@ -110,7 +111,7 @@ int32_t initialize_fat_tables(BPB *bpb) {
 int32_t initialize_root_directory(BPB *bpb) {
     uint32_t root_dir_lba = bpb->reserved_sectors + (bpb->fat_size_16 * bpb->fat_count);
 
-    // Root Directory structure: http://osr600doc.sco.com/en/FS_admin/_The_Root_Directory.html
+    // Root Directory entry structure: http://osr600doc.sco.com/en/FS_admin/_The_Root_Directory.html
     uint32_t root_dir_size = bpb->root_entry_count * ROOT_DIR_ENTRY_SIZE;
     uint8_t *root_directory = (uint8_t *)kmalloc(root_dir_size);
     if (root_directory == NULL) {
@@ -177,13 +178,69 @@ uint16_t find_free_cluster(BPB *bpb) {
 }
 
 int32_t create_file(BPB *bpb, const char *filename) {
-    uint16_t first_cluster = find_free_cluster(bpb);
-    if (first_cluster == 0){
-        screen_print("Error in create_file: no free cluster found", 0);
+    if (filename == NULL){
+        screen_print("Error in create_file: invalid arguments", 0);
         return EXIT_FAILURE;
     }
 
+    int32_t return_code;
+    uint16_t first_cluster = find_free_cluster(bpb);
+    if (first_cluster == 0){
+        screen_print("Error in create_file: no free cluster available", 0);
+        return EXIT_FAILURE;
+    }
+    uint32_t root_dir_lba = bpb->reserved_sectors + (bpb->fat_size_16 * bpb->fat_count);
+    size_t root_dir_size = bpb->root_entry_count * ROOT_DIR_ENTRY_SIZE;
+    uint8_t *root_directory = (uint8_t *)kmalloc(root_dir_size);
+    if (root_directory == NULL) {
+        screen_print("Error in create_file: failed to allocate memory for root directory", 0);
+        return EXIT_FAILURE;
+    }
+    return_code = ata_read_block(root_dir_lba, root_directory);
+    if (return_code == EXIT_FAILURE){
+        screen_print("Error in create_file: failed to read the root directory", 0);
+        kfree(root_directory);
+        return EXIT_FAILURE;
+    }
+
+    // Find free root directory entry
+    uint8_t *entry = NULL;
+    for(size_t entry_index = 0; entry_index < bpb->root_entry_count; entry_index += ROOT_DIR_ENTRY_SIZE){
+        if (root_directory[entry_index] == 0x00 || root_directory[entry_index] == 0xE5){
+            entry = &(root_directory[entry_index]);
+            break;
+        }
+    }
+    if (entry == NULL){
+        screen_print("Error in create_file: no free root directory entry available", 0);
+        kfree(root_directory);
+        return EXIT_FAILURE;
+    }
+
+    // Fill the entry with data (entry structure: http://osr600doc.sco.com/en/FS_admin/_The_Root_Directory.html)
+    memset_tool(entry, 0, ROOT_DIR_ENTRY_SIZE); // Initialize the entry to zeros (no garbage values)
+    memcpy_tool(entry, filename, FILE_NAME_LENGTH * sizeof(char));
+    // TODO: add more info about the file (creation time, last modified...)
+    entry[26] = first_cluster & 0xFF;
+    entry[27] = (first_cluster >> 8) & 0xFF;
+    return_code = ata_write_block(root_dir_lba, root_directory);
+    if (return_code == EXIT_FAILURE){
+        screen_print("Error in create_file: failed to update the root directory", 0);
+        kfree(root_directory);
+        return EXIT_FAILURE;
+    }
+    return_code = write_cluster(bpb, first_cluster, FAT16_EOF); // Mark cluster as EOF
+    if (return_code == EXIT_FAILURE){
+        screen_print("Error in create_file: failed to update FAT", 0);
+        kfree(root_directory);
+        return EXIT_FAILURE;
+    }
+    kfree(root_directory);
     return EXIT_SUCCESS;
+}
+
+int32_t write_file(BPB *bpb, const char *filename, uint8_t *buffer, uint32_t buffer_size){
+    
 }
 
 void read_file(BPB *bpb, const char *filename, uint8_t *buffer, uint32_t buffer_size) {
