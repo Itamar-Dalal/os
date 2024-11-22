@@ -98,7 +98,7 @@ int32_t initialize_fat_tables(BPB *bpb) {
             int32_t return_code = ata_write_block(fat_lba + j, (fat + (bpb->bytes_per_sector * j)));
             if (return_code != EXIT_SUCCESS) {
                 screen_print("Error in initialize_fat_tables: failed to write FAT to disk", 0);
-                //kfree(fat);
+                kfree(fat);
                 return EXIT_FAILURE;
             }
         }
@@ -121,7 +121,7 @@ int32_t initialize_root_directory(BPB *bpb) {
     int32_t return_code = ata_write_block(root_dir_lba, root_directory);
     if (return_code != EXIT_SUCCESS) {
         screen_print("Error in initialize_root_directory: failed to write root directory to disk", 0);
-        //kfree(root_directory);
+        kfree(root_directory);
         return EXIT_FAILURE;
     }
     kfree(root_directory);
@@ -176,8 +176,14 @@ uint16_t find_free_cluster(BPB *bpb) {
     return 0; // No free cluster found
 }
 
-void create_file(BPB *bpb, const char *filename) {
+int32_t create_file(BPB *bpb, const char *filename) {
+    uint16_t first_cluster = find_free_cluster(bpb);
+    if (first_cluster == 0){
+        screen_print("Error in create_file: no free cluster found", 0);
+        return EXIT_FAILURE;
+    }
 
+    return EXIT_SUCCESS;
 }
 
 void read_file(BPB *bpb, const char *filename, uint8_t *buffer, uint32_t buffer_size) {
