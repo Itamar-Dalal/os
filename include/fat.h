@@ -41,7 +41,7 @@ int32_t initialize_root_directory(BPB *bpb);
 uint16_t read_cluster(BPB *bpb, const uint16_t cluster_number);
 int32_t write_cluster(BPB *bpb, const uint16_t cluster_number, const uint16_t value);
 uint16_t find_free_cluster(BPB *bpb);
-void create_file(BPB *bpb, const char *filename);
+int32_t create_file(BPB *bpb, const char *filename);
 int32_t write_file(BPB *bpb, const char *filename, uint8_t *buffer, uint32_t buffer_size);
 void read_file(BPB *bpb, const char *filename, uint8_t *buffer, uint32_t buffer_size);
 void delete_file(BPB *bpb, const char *filename);

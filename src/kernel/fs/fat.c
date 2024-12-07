@@ -205,9 +205,10 @@ int32_t create_file(BPB *bpb, const char *filename) {
 
     // Find free root directory entry
     uint8_t *entry = NULL;
-    for(size_t entry_index = 0; entry_index < bpb->root_entry_count; entry_index += ROOT_DIR_ENTRY_SIZE){
-        if (root_directory[entry_index] == 0x00 || root_directory[entry_index] == 0xE5){
-            entry = &(root_directory[entry_index]);
+    for (size_t entry_index = 0; entry_index < bpb->root_entry_count; entry_index++) {
+        uint8_t *current_entry = &root_directory[entry_index * ROOT_DIR_ENTRY_SIZE];
+        if (*current_entry == 0x00 || *current_entry == 0xE5) {
+            entry = current_entry;
             break;
         }
     }
@@ -240,7 +241,44 @@ int32_t create_file(BPB *bpb, const char *filename) {
 }
 
 int32_t write_file(BPB *bpb, const char *filename, uint8_t *buffer, uint32_t buffer_size){
+    if (filename == NULL){
+        screen_print("Error in write_file: invalid arguments", 0);
+        return EXIT_FAILURE;
+    }
+
+    int32_t return_code;
+    uint32_t bytes_per_cluster = bpb->sectors_per_cluster * bpb->bytes_per_sector;
+    uint16_t num_of_clusters = buffer_size / bytes_per_cluster;
+
+    uint32_t root_dir_lba = bpb->reserved_sectors + (bpb->fat_size_16 * bpb->fat_count);
+    uint32_t root_dir_size = bpb->root_entry_count * ROOT_DIR_ENTRY_SIZE;
+    uint8_t *root_directory = (uint8_t *)kmalloc(root_dir_size);
+    if (root_directory == NULL) {
+        screen_print("Error in write_file: failed to allocate memory for root directory", 0);
+        return EXIT_FAILURE;
+    }
+    return_code = ata_read_block(root_dir_lba, root_directory);
+    if (return_code == EXIT_FAILURE) {
+        screen_print("Error in write_file: failed to read the root directory", 0);
+        kfree(root_directory);
+        return EXIT_FAILURE;
+    }
     
+    uint8_t *entry = NULL;
+    for (size_t entry_index = 0; entry_index < bpb->root_entry_count; entry_index++) {
+        uint8_t *current_entry = &root_directory[entry_index * ROOT_DIR_ENTRY_SIZE];
+        if (!memcmp_tool(current_entry, filename, 8)) {
+            entry = current_entry;
+            break;
+        }
+    }
+    if (entry == NULL){ // If there is no file with this file name
+        screen_print("Error in create_file: a file with this name does not exist", 0);
+        kfree(root_directory);
+        return EXIT_FAILURE;
+    }
+    
+    return EXIT_SUCCESS;
 }
 
 void read_file(BPB *bpb, const char *filename, uint8_t *buffer, uint32_t buffer_size) {

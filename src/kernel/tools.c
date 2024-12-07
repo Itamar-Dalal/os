@@ -41,6 +41,23 @@ inline void memcpy_tool(void *dest, const void *src, size_t len)
 	for (; len != 0; len--) *dest_copy++ = *src_copy++;
 }
 
+
+// Compare the value pointed to by src to the value pointed to by dest. Return values:
+// -1 - the first byte that does not match in both memory blocks has a lower value in src than in dest (if evaluated as unsigned char values)
+// 0 -the contents of both memory blocks are equal
+// 1 - the first byte that does not match in both memory blocks has a greater value in src than in dest (if evaluated as unsigned char values)
+int32_t memcmp_tool(void *dest, void *src, size_t len){
+	uint8_t *d = (uint8_t *)dest;
+	uint8_t *s = (uint8_t *)src;
+	for(size_t i = 0; i < len; i++){
+		if(s[i] < d[i])
+			return -1;
+		else if(s[i] > d[i])
+			return 1;
+	}
+	return 0;
+}
+
 // Convert int to ascii
 char *itoa(int32_t value, char *str, uint32_t base) {
 	char *rc;
