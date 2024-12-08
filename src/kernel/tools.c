@@ -46,7 +46,7 @@ inline void memcpy_tool(void *dest, const void *src, size_t len)
 // -1 - the first byte that does not match in both memory blocks has a lower value in src than in dest (if evaluated as unsigned char values)
 // 0 -the contents of both memory blocks are equal
 // 1 - the first byte that does not match in both memory blocks has a greater value in src than in dest (if evaluated as unsigned char values)
-int32_t memcmp_tool(void *dest, void *src, size_t len){
+int32_t memcmp_tool(const void *dest, const void *src, size_t len){
 	uint8_t *d = (uint8_t *)dest;
 	uint8_t *s = (uint8_t *)src;
 	for(size_t i = 0; i < len; i++){

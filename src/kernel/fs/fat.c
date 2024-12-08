@@ -24,6 +24,8 @@
 #define FAT16_EOF 0xFFF8
 #define FAT16_FREE 0x0000
 
+uint16_t used_clusters_count = 0; // global variable for keeping track of how many clusters are used
+
 // FAT16 structure: https://www.hdd-tool.com/pic/fat16.jpg
 
 // This Function will return a new random number for each call (volume serial number should be unique)
@@ -165,28 +167,70 @@ int32_t write_cluster(BPB *bpb, const uint16_t cluster_number, const uint16_t va
         screen_print("Error in write_cluster: failed to write FAT entry for the cluster", 0);
         return EXIT_FAILURE;
     }
+    used_clusters_count++;
     return EXIT_SUCCESS;
 }
 
 uint16_t find_free_cluster(BPB *bpb) {
+    if (bpb == NULL){
+        screen_print("Error in find_free_cluster: invalid arguments", 0);
+        return FAT16_FREE;
+    }
     for (uint16_t cluster_index = 2; cluster_index < 0xFFF8; cluster_index++) {
         if (read_cluster(bpb, cluster_index) == FAT16_FREE) { // Free cluster is marked as 0
             return cluster_index;
         }
     }
-    return 0; // No free cluster found
+    return FAT16_EOF; // No free cluster found
+}
+
+uint32_t calculate_cluster_lba(BPB *bpb, uint16_t cluster) {
+    if (cluster < 2 || cluster >= 0xFFF8 || bpb == NULL){
+        screen_print("Error in calculate_cluster_lba: invalid arguments", 0);
+        return 0; // I chose 0 as error because it is reserved for the MBR
+    }
+    uint32_t first_data_sector = bpb->reserved_sectors + (bpb->fat_size_16 * bpb->fat_count) + ((bpb->root_entry_count * ROOT_DIR_ENTRY_SIZE) / bpb->bytes_per_sector);
+    uint32_t lba = (cluster - 2) * bpb->sectors_per_cluster + first_data_sector;
+    return lba;
+}
+
+int32_t ata_write_cluster(BPB *bpb, uint16_t cluster, void *buffer){
+    if (cluster < 2 || cluster >= 0xFFF8 || buffer == NULL || bpb == NULL){
+        screen_print("Error in ata_write_cluster: invalid arguments", 0);
+        return EXIT_FAILURE;
+    }
+    uint32_t cluster_start_lba = calculate_cluster_lba(bpb, cluster);
+    if (cluster_start_lba == 0){
+        screen_print("Error in ata_write_cluster: calculate_cluster_lba failed", 0);
+        return EXIT_FAILURE;
+    }
+    for (size_t sector = 0; sector < bpb->sectors_per_cluster; sector++) {
+        uint32_t sector_lba = cluster_start_lba + sector;
+        int32_t return_code = ata_write_block(sector_lba, buffer + (sector * bpb->bytes_per_sector));
+        if (return_code == EXIT_FAILURE) {
+            screen_print("Error in ata_write_cluster: failed to write data to the disk", 0);
+            kfree(root_directory);
+            return EXIT_FAILURE;
+        }
+    }
+    kfree(root_directory);
+    return EXIT_SUCCESS;
 }
 
 int32_t create_file(BPB *bpb, const char *filename) {
-    if (filename == NULL){
+    if (filename == NULL || bpb == NULL){
         screen_print("Error in create_file: invalid arguments", 0);
         return EXIT_FAILURE;
     }
 
     int32_t return_code;
     uint16_t first_cluster = find_free_cluster(bpb);
-    if (first_cluster == 0){
+    if (first_cluster == FAT16_EOF){
         screen_print("Error in create_file: no free cluster available", 0);
+        return EXIT_FAILURE;
+    }
+    if (first_cluster == FAT16_FREE){
+        screen_print("Error in create_file: find_free_cluster failed", 0);
         return EXIT_FAILURE;
     }
     uint32_t root_dir_lba = bpb->reserved_sectors + (bpb->fat_size_16 * bpb->fat_count);
@@ -222,17 +266,9 @@ int32_t create_file(BPB *bpb, const char *filename) {
     memset_tool(entry, 0, ROOT_DIR_ENTRY_SIZE); // Initialize the entry to zeros (no garbage values)
     memcpy_tool(entry, filename, FILE_NAME_LENGTH * sizeof(char));
     // TODO: add more info about the file (creation time, last modified...)
-    entry[26] = first_cluster & 0xFF;
-    entry[27] = (first_cluster >> 8) & 0xFF;
     return_code = ata_write_block(root_dir_lba, root_directory);
     if (return_code == EXIT_FAILURE){
         screen_print("Error in create_file: failed to update the root directory", 0);
-        kfree(root_directory);
-        return EXIT_FAILURE;
-    }
-    return_code = write_cluster(bpb, first_cluster, FAT16_EOF); // Mark cluster as EOF
-    if (return_code == EXIT_FAILURE){
-        screen_print("Error in create_file: failed to update FAT", 0);
         kfree(root_directory);
         return EXIT_FAILURE;
     }
@@ -241,15 +277,22 @@ int32_t create_file(BPB *bpb, const char *filename) {
 }
 
 int32_t write_file(BPB *bpb, const char *filename, uint8_t *buffer, uint32_t buffer_size){
-    if (filename == NULL){
+    if (filename == NULL || buffer_size == 0 || buffer == NULL || bpb == NULL){
         screen_print("Error in write_file: invalid arguments", 0);
+        return EXIT_FAILURE;
+    }
+    uint32_t bytes_per_cluster = bpb->sectors_per_cluster * bpb->bytes_per_sector;
+    uint16_t num_of_clusters = buffer_size / bytes_per_cluster;
+    if (buffer_size % bytes_per_cluster != 0)
+        num_of_clusters++;
+    uint16_t total_clusters = bpb->total_sectors_16 / bpb->sectors_per_cluster;
+    uint16_t remaining_clusters = total_clusters - used_clusters_count;
+    if (remaining_clusters < num_of_clusters){
+        screen_print("Error in write_file: not enough clusters available", 0);
         return EXIT_FAILURE;
     }
 
     int32_t return_code;
-    uint32_t bytes_per_cluster = bpb->sectors_per_cluster * bpb->bytes_per_sector;
-    uint16_t num_of_clusters = buffer_size / bytes_per_cluster;
-
     uint32_t root_dir_lba = bpb->reserved_sectors + (bpb->fat_size_16 * bpb->fat_count);
     uint32_t root_dir_size = bpb->root_entry_count * ROOT_DIR_ENTRY_SIZE;
     uint8_t *root_directory = (uint8_t *)kmalloc(root_dir_size);
@@ -267,17 +310,80 @@ int32_t write_file(BPB *bpb, const char *filename, uint8_t *buffer, uint32_t buf
     uint8_t *entry = NULL;
     for (size_t entry_index = 0; entry_index < bpb->root_entry_count; entry_index++) {
         uint8_t *current_entry = &root_directory[entry_index * ROOT_DIR_ENTRY_SIZE];
-        if (!memcmp_tool(current_entry, filename, 8)) {
+        if (!memcmp_tool(current_entry, filename, FILE_NAME_LENGTH)) {
             entry = current_entry;
             break;
         }
     }
     if (entry == NULL){ // If there is no file with this file name
-        screen_print("Error in create_file: a file with this name does not exist", 0);
+        screen_print("Error in write_file: a file with this name does not exist", 0);
         kfree(root_directory);
         return EXIT_FAILURE;
     }
-    
+
+    uint32_t buffer_offset = 0;
+    uint16_t first_cluster = find_free_cluster(bpb);
+    if (first_cluster == FAT16_EOF) { // It shouldn't run this code (because I checked if there is enough space earlier)
+        screen_print("Error in write_file: no free clusters available", 0);
+        kfree(root_directory);
+        return EXIT_FAILURE;
+    }
+    if (first_cluster == FAT16_FREE){
+        screen_print("Error in write_file: find_free_cluster failed", 0);
+        kfree(root_directory);
+        return EXIT_FAILURE;
+    }
+    return_code = ata_write_cluster(bpb, first_cluster, buffer + buffer_offset);
+    if (return_code == EXIT_FAILURE){
+        screen_print("Error in write_file: failed to write data to the disk", 0);
+        kfree(root_directory);
+        return EXIT_FAILURE;
+    }
+    buffer_offset += bytes_per_cluster;
+    uint16_t prev_cluster = first_cluster;
+    for(size_t i = 1; i < num_of_clusters; i++){
+        uint16_t next_cluster = find_free_cluster(bpb);
+        if (next_cluster == FAT16_EOF) { // It shouldn't run this code (because I checked if there is enough space earlier)
+            screen_print("Error in write_file: no free clusters available", 0);
+            kfree(root_directory);
+            return EXIT_FAILURE;
+        }
+        if (next_cluster == FAT16_FREE){
+            screen_print("Error in write_file: find_free_cluster failed", 0);
+            kfree(root_directory);
+            return EXIT_FAILURE;
+        }
+        return_code = ata_write_cluster(bpb, next_cluster, buffer + buffer_offset);
+        if (return_code == EXIT_FAILURE){
+            screen_print("Error in write_file: failed to write data to the disk", 0);
+            kfree(root_directory);
+            return EXIT_FAILURE;
+        }
+        buffer_offset += bytes_per_cluster;
+
+        return_code = write_cluster(bpb, prev_cluster, next_cluster);
+        if (return_code == EXIT_FAILURE){
+            screen_print("Error in write_file: failed to update FAT", 0);
+            kfree(root_directory);
+            return EXIT_FAILURE;
+        }
+        prev_cluster = next_cluster;
+    }
+    write_cluster(bpb, prev_cluster, FAT16_EOF); // Mark cluster as EOF
+
+    // TODO: update more info about the file (creation time, last modified...)
+    entry[26] = first_cluster & 0xFF;
+    entry[27] = (first_cluster >> 8) & 0xFF;
+    entry[28] = buffer_size & 0xFF;
+    entry[29] = (buffer_size >> 8) & 0xFF;
+    entry[30] = (buffer_size >> 16) & 0xFF;
+    entry[31] = (buffer_size >> 24) & 0xFF;
+    return_code = ata_write_block(root_dir_lba, root_directory);
+    kfree(root_directory);
+    if (return_code == EXIT_FAILURE) {
+        screen_print("Error in write_file: failed to update the root directory", 0);
+        return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
 }
 
