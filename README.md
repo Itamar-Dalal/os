@@ -67,16 +67,9 @@ After running the OS, you will be greeted with a basic shell interface. You can 
 Here's an overview of the project's structure and key components:
 
 - **src/**: Contains the source code for the OS.
-  - **kernel.c**: Implements the core kernel functionality, including initialization and interrupt handling.
-  - **main.c**: Contains the main entry point of the OS, initializing hardware and starting the kernel.
-  - **memory.c**: Manages memory allocation and paging.
-  - **scheduler.c**: Implements process scheduling and context switching.
-  - **filesystem.c**: Provides file system operations and management.
-  - **shell.c**: Implements a basic command line interface for interacting with the OS.
 - **include/**: Contains header files for the OS, defining structures and function prototypes used across the project.
-- **boot/**: Contains bootloader code written in Assembly, responsible for loading the kernel into memory.
 - **Makefile**: Defines the build process for the OS.
-- **scripts/**: Contains shell scripts for auxiliary tasks, such as cleaning the build directory.
+- **iso/**: Contains the iso of the operating system.
 
 ## Acknowledgments
 
