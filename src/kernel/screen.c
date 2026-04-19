@@ -9,9 +9,11 @@ uint32_t prompt_length = 0;
 uint8_t prompt_x = 0;
 uint8_t prompt_y = 0;
 
-void screen_clear() {
+void screen_clear()
+{
     int i;
-    for (i = 0; i < NUM_OF_BYTES(NUM_OF_CELLS_X, NUM_OF_CELLS_Y); i += 2) {
+    for (i = 0; i < NUM_OF_BYTES(NUM_OF_CELLS_X, NUM_OF_CELLS_Y); i += 2)
+    {
         *(vidmem + i) = 0x20;
         *(vidmem + i + 1) = DEFAULT_ATTR;
     }
@@ -19,7 +21,8 @@ void screen_clear() {
     y = 0;
 }
 
-void set_cursor(uint8_t x, uint8_t y) {
+void set_cursor(uint8_t x, uint8_t y)
+{
     uint16_t pos = y * NUM_OF_CELLS_X + x;
     // Send the high byte of the cursor position to VGA port
     outb(0x3D4, 0x0E);
@@ -29,11 +32,13 @@ void set_cursor(uint8_t x, uint8_t y) {
     outb(0x3D5, pos & 0xFF);
 }
 
-void set_prompt(char *prompt, uint8_t attr) {
+void set_prompt(char *prompt, uint8_t attr)
+{
     if (attr == 0)
         attr = DEFAULT_ATTR;
     prompt_length = 0;
-    while (prompt[prompt_length]) {
+    while (prompt[prompt_length])
+    {
         *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = prompt[prompt_length];
         *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = attr;
         x++;
@@ -43,15 +48,18 @@ void set_prompt(char *prompt, uint8_t attr) {
     prompt_x = x - 1;
 }
 
-void screen_scroll() {
+void screen_scroll()
+{
     size_t i;
     // Shift all characters up by one line in video memory by copying data from the current line to the line above
-    for (i = NUM_OF_SCROLL_BYTES; i < NUM_OF_BYTES(NUM_OF_CELLS_X, NUM_OF_CELLS_Y); i += 2) {
+    for (i = NUM_OF_SCROLL_BYTES; i < NUM_OF_BYTES(NUM_OF_CELLS_X, NUM_OF_CELLS_Y); i += 2)
+    {
         *(vidmem + i - NUM_OF_SCROLL_BYTES) = *(vidmem + i);
         *(vidmem + i - NUM_OF_SCROLL_BYTES + 1) = *(vidmem + i + 1);
     }
     // Clear the last line
-    for (i = 0; i < NUM_OF_CELLS_X * 2; i += 2) {
+    for (i = 0; i < NUM_OF_CELLS_X * 2; i += 2)
+    {
         *(vidmem + (NUM_OF_CELLS_Y - 1) * NUM_OF_CELLS_X * 2 + i) = ' ';
         *(vidmem + (NUM_OF_CELLS_Y - 1) * NUM_OF_CELLS_X * 2 + i + 1) = DEFAULT_ATTR;
     }
@@ -59,37 +67,48 @@ void screen_scroll() {
     prompt_y--;
 }
 
-void handle_input() {
+void handle_input(char *input)
+{
     // This function will be called when Enter is pressed
     // Currently, it does nothing
+    screen_print(input, 0);
 }
 
-void screen_print(char *string, uint8_t attr) {
+void screen_print(char *string, uint8_t attr)
+{
     if (attr == 0)
         attr = DEFAULT_ATTR; // Defult attribute
     size_t i = 0;
-    while (string[i]) {
+    while (string[i])
+    {
         if (y == NUM_OF_CELLS_Y)
             screen_scroll();
-        if (string[i] > 0x1f && string[i] != 0x7f) { // Printable characters
+        if (string[i] > 0x1f && string[i] != 0x7f)
+        { // Printable characters
             *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = string[i];
             *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = attr;
             x++;
-            if (x == NUM_OF_CELLS_X) {
+            if (x == NUM_OF_CELLS_X)
+            {
                 x = 0;
                 y++;
             }
         }
-        else {
-            switch (string[i]) {
+        else
+        {
+            switch (string[i])
+            {
             case '\b': // Backspace
-                if (y != prompt_y || x > prompt_x + 1) {
-                    if (x != 0) {
+                if (y != prompt_y || x > prompt_x + 1)
+                {
+                    if (x != 0)
+                    {
                         x--;
                         *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = ' ';
                         *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2) + 1) = attr;
                     }
-                    else if (y > 2) {
+                    else if (y > 2)
+                    {
                         x = NUM_OF_CELLS_X - 1;
                         y--;
                         *(vidmem + (y * NUM_OF_CELLS_X * 2) + (x * 2)) = ' ';
@@ -100,14 +119,14 @@ void screen_print(char *string, uint8_t attr) {
 
             case '\t': // Tab
                 x += 4;
-                if (x >= NUM_OF_CELLS_X) {
+                if (x >= NUM_OF_CELLS_X)
+                {
                     x = 0;
                     y++;
                 }
                 break;
 
             case '\n': // Line feed (Enter key)
-                handle_input();
                 x = 0;
                 y++;
                 if (y == NUM_OF_CELLS_Y)
@@ -121,7 +140,8 @@ void screen_print(char *string, uint8_t attr) {
     }
 }
 
-void screen_print_int(int32_t num, uint32_t base, uint8_t attr) {
+void screen_print_int(int32_t num, uint32_t base, uint8_t attr)
+{
     if (attr == 0)
         attr = DEFAULT_ATTR;
     char buff[100];

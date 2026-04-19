@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "keyboard.h"
+#include "shell.h"
 
 void keyboard_interrupt_handler() {
     uint8_t scancode = inb(KEYBOARD_DATA_PORT);
@@ -66,7 +67,6 @@ void keyboard_interrupt_handler() {
             ascii -= 32; // Convert to uppercase
     }
     if (ascii > 0) {
-        char str[2] = {ascii, '\0'};
-        screen_print(str, 0);
+        handle_shell(ascii, 0);
     }
 }
