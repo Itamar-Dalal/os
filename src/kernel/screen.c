@@ -67,13 +67,6 @@ void screen_scroll()
     prompt_y--;
 }
 
-void handle_input(char *input)
-{
-    // This function will be called when Enter is pressed
-    // Currently, it does nothing
-    screen_print(input, 0);
-}
-
 void screen_print(char *string, uint8_t attr)
 {
     if (attr == 0)

@@ -5,7 +5,18 @@
 static size_t index;
 static char command_buf[COMMAND_BUFFER_SIZE];
 
-void reset_buffer();
+void reset_buffer()
+{
+    index = 0;
+    memset_tool(command_buf, 0, COMMAND_BUFFER_SIZE);
+}
+
+void handle_input(char *input)
+{
+    // This function will be called when Enter is pressed by the user
+    screen_print(input, 0);
+}
+
 
 void handle_shell(char content, uint8_t attr)
 {
@@ -20,10 +31,4 @@ void handle_shell(char content, uint8_t attr)
         handle_input(command_buf);
         reset_buffer();
     }
-}
-
-void reset_buffer()
-{
-    index = 0;
-    memset_tool(command_buf, 0, COMMAND_BUFFER_SIZE);
 }

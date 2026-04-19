@@ -40,13 +40,13 @@ isr.o: kernel/isr.c
 keyboard.o: kernel/keyboard.c
 	$(CC) $(CFLAGS) -o $@ $^
 
-memory.o: kernel/mm/memory.c
+memory.o: kernel/memory.c
 	$(CC) $(CFLAGS) -o $@ $^
 
 multiboot_info.o: kernel/multiboot_info.c
 	$(CC) $(CFLAGS) -o $@ $^
 
-paging.o: kernel/mm/paging.asm
+paging.o: kernel/paging.asm
 	$(ASM) $(ASMFLAGS) -o $@ $^
 
 shell.o: kernel/shell.c
